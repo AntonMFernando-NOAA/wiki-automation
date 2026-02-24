@@ -1,5 +1,6 @@
 # ============================================================
 # Daily Wiki Update - Tracks all AntonMFernando-NOAA repos
+# Updates this repository's wiki (wiki-automation)
 # ============================================================
 
 name: Daily Wiki Update
@@ -39,15 +40,15 @@ jobs:
           SUMMARY_DATE: ${{ inputs.date }}
         run: python generate_daily_summary.py
 
-      - name: Push to global-workflow wiki
+      - name: Push to wiki
         env:
           WIKI_PAT: ${{ secrets.WIKI_PAT }}
         run: |
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Clone the global-workflow wiki
-          git clone https://x-access-token:${WIKI_PAT}@github.com/AntonMFernando-NOAA/global-workflow.wiki.git wiki
+          # Clone this repository's wiki
+          git clone https://x-access-token:${WIKI_PAT}@github.com/AntonMFernando-NOAA/wiki.wiki.git wiki
           cd wiki
 
           # Create Daily-Updates.md with header if it doesn't exist

@@ -1,13 +1,15 @@
 # Wiki Automation
 
-Automated daily updates for the [global-workflow wiki](https://github.com/AntonMFernando-NOAA/global-workflow/wiki).
+Automated daily updates tracking all AntonMFernando-NOAA repositories.
 
 ## Overview
 
 This repository contains GitHub Actions automation that:
 - **Auto-discovers** all repositories under `AntonMFernando-NOAA`
 - **Tracks daily activity**: commits, PRs, and issues
-- **Updates the wiki** with daily summaries at 06:00 UTC (weekdays only)
+- **Updates THIS repository's wiki** with daily summaries at 06:00 UTC (weekdays only)
+
+📖 **Wiki Location**: https://github.com/AntonMFernando-NOAA/wiki/wiki
 
 ## Features
 
@@ -16,8 +18,9 @@ This repository contains GitHub Actions automation that:
 - ✅ Expandable details for full activity breakdown
 - ✅ Weekday-only updates (Mon-Fri)
 - ✅ Manual trigger support for custom dates
+- ✅ Self-contained - wiki lives with the automation code
 
-## Setup Instructions
+## Quick Start
 
 ### 1. Create GitHub Repository
 
@@ -25,50 +28,37 @@ This repository contains GitHub Actions automation that:
 # Create new repo at: https://github.com/new
 # Repository name: wiki
 # Description: Automated wiki updates for AntonMFernando-NOAA repositories
-# Visibility: Public (or Private with wiki enabled)
+# Visibility: Public (or Private - wiki works either way)
+# ✅ Check "Add a wiki" when creating
 ```
 
-### 2. Configure GitHub Secrets
-
-Go to repository **Settings** → **Secrets and variables** → **Actions**:
-
-**Secret**: `WIKI_PAT`
-- Personal Access Token with:
-  - `repo` scope (to read repositories)
-  - `admin:org` → `read:org` (to list organization repos, if applicable)
-- Generate at: https://github.com/settings/tokens/new
-
-### 3. Push This Repository
+### 2. Push This Repository
 
 ```bash
 cd /scratch3/NCEPDEV/global/Anton.Fernando/wiki-automation
-
-# Create .github/workflows directory
-mkdir -p .github/workflows
-mv .github-workflows-daily-wiki-update.yml .github/workflows/daily-wiki-update.yml
-
-# Initialize and push
-git add .
-git commit -m "Initial commit: automated wiki updates"
-git branch -M main
-git remote add origin https://github.com/AntonMFernando-NOAA/wiki.git
-git push -u origin main
+./QUICK_START.sh
 ```
+
+### 3. Configure GitHub Secrets
+
+Go to: https://github.com/AntonMFernando-NOAA/wiki/settings/secrets/actions
+
+Create secret `WIKI_PAT`:
+- Generate token at: https://github.com/settings/tokens/new
+- Scopes needed: `repo`, `read:org`
 
 ### 4. Enable GitHub Actions
 
-1. Go to repository **Settings** → **Actions** → **General**
-2. Under "Actions permissions", select **Allow all actions**
-3. Under "Workflow permissions", select **Read and write permissions**
+Go to: https://github.com/AntonMFernando-NOAA/wiki/settings/actions
+- ✅ Allow all actions
+- ✅ Read and write permissions
 
-### 5. Test the Workflow
+### 5. Test It
 
-1. Go to **Actions** → **Daily Wiki Update**
-2. Click **Run workflow**
-3. Leave date blank (defaults to yesterday)
-4. Click **Run workflow**
-
-The first run will create the wiki page structure.
+Go to: https://github.com/AntonMFernando-NOAA/wiki/actions
+- Click "Daily Wiki Update" → "Run workflow"
+- Leave date blank
+- Check wiki after run completes
 
 ## How It Works
 
@@ -76,7 +66,7 @@ The first run will create the wiki page structure.
 - Runs Monday-Friday at 06:00 UTC
 - Auto-discovers all `AntonMFernando-NOAA` repositories
 - Collects activity from previous day
-- Updates wiki with narrative summary
+- Updates **this repository's wiki** with narrative summary
 
 ### Manual Execution
 ```bash
@@ -86,7 +76,7 @@ The first run will create the wiki page structure.
 
 ### Output Format
 
-**Wiki page**: [Daily-Updates](https://github.com/AntonMFernando-NOAA/global-workflow/wiki/Daily-Updates)
+**Wiki page**: https://github.com/AntonMFernando-NOAA/wiki/wiki/Daily-Updates
 
 Each entry includes:
 - **Date header**: Tuesday, February 24, 2026
@@ -102,37 +92,90 @@ Auto-discovers all repositories including:
 - GSI
 - Any other public/private repos under your account
 
+## Repository Structure
+
+```
+wiki-automation/
+├── .github/workflows/
+│   └── daily-wiki-update.yml    # GitHub Actions workflow
+├── generate_daily_summary.py    # Auto-discovery and summary generation
+├── README.md                     # This file
+├── SETUP_INSTRUCTIONS.md         # Detailed setup guide
+├── QUICK_START.sh                # Automated setup script
+└── MIGRATE_WIKI.sh               # Tool to migrate from other wikis
+```
+
+## Migrating Existing Wiki Content
+
+If you have content in global-workflow wiki that you want to move here:
+
+```bash
+./MIGRATE_WIKI.sh
+```
+
+This will:
+1. Clone the global-workflow wiki
+2. Copy relevant pages to wiki-automation wiki
+3. Update links and references
+4. Push to wiki-automation wiki
+
 ## Customization
 
 ### Change Schedule
 Edit `.github/workflows/daily-wiki-update.yml`:
 ```yaml
 schedule:
-  - cron: '0 6 * * 1-5'  # Change to your preferred time
+  - cron: '0 12 * * *'  # Every day at noon UTC
 ```
 
 ### Track Different Organization
-Set `GITHUB_ACTOR` variable in the workflow:
+Edit `.github/workflows/daily-wiki-update.yml`:
 ```yaml
 env:
   GITHUB_ACTOR: 'different-org-name'
 ```
 
+### Update Wiki Manually
+```python
+# Set environment variables
+export GH_TOKEN="your-github-token"
+export GITHUB_ACTOR="AntonMFernando-NOAA"
+export SUMMARY_DATE="2026-02-23"
+
+# Run script
+python generate_daily_summary.py
+```
+
 ## Troubleshooting
 
 ### Workflow Not Running
-- Verify repository default branch is `main`
+- Verify default branch is `main`
 - Check GitHub Actions is enabled
 - Ensure `WIKI_PAT` secret is configured
+- Verify wiki is enabled on the repository
 
 ### Permission Errors
 - PAT needs `repo` scope for private repos
 - PAT needs `read:org` for organization repos
+- PAT needs wiki access (automatic with `repo` scope)
 
 ### No Activity Detected
 - Check PAT has access to repositories
 - Verify repositories aren't archived
 - Run manually with yesterday's date to test
+
+### Wiki Not Created
+- Ensure "Wiki" is enabled in repository settings
+- The first run will create the wiki structure
+- Check Actions logs for detailed errors
+
+## Advantages Over global-workflow Wiki
+
+✅ **Self-contained**: Wiki lives with automation code  
+✅ **Clean separation**: Doesn't clutter global-workflow  
+✅ **Independent**: Can track any combination of repositories  
+✅ **Flexible**: Easy to customize without affecting main repos  
+✅ **Portable**: Can be forked/duplicated for other purposes  
 
 ## Maintenance
 
@@ -140,7 +183,14 @@ This automation is self-maintaining:
 - No repository list updates needed
 - Automatically includes new repositories
 - Skips archived repositories
+- Wiki format auto-adjusts
+
+## Documentation
+
+- **Quick setup**: `./QUICK_START.sh`
+- **Detailed guide**: `SETUP_INSTRUCTIONS.md`
+- **Migrate content**: `./MIGRATE_WIKI.sh`
 
 ## License
 
-This is a personal automation utility. Use freely.
+Personal automation utility. Use freely.
