@@ -48,7 +48,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           # Clone this repository's wiki
-          git clone https://x-access-token:${WIKI_PAT}@github.com/AntonMFernando-NOAA/wiki.wiki.git wiki
+          git clone https://x-access-token:${WIKI_PAT}@github.com/AntonMFernando-NOAA/wiki-automation.wiki.git wiki
           cd wiki
 
           # Create Daily-Updates.md with header if it doesn't exist

@@ -37,7 +37,7 @@ cd /scratch3/NCEPDEV/global/Anton.Fernando/wiki-automation
 Or manually:
 ```bash
 git branch -M main
-git remote add origin https://github.com/AntonMFernando-NOAA/wiki.git
+git remote add origin https://github.com/AntonMFernando-NOAA/wiki-automation.git
 git push -u origin main
 ```
 
@@ -45,7 +45,7 @@ git push -u origin main
 
 **IMPORTANT**: GitHub wikis must have at least one page before cloning.
 
-1. Go to: https://github.com/AntonMFernando-NOAA/wiki/wiki
+1. Go to: https://github.com/AntonMFernando-NOAA/wiki-automation/wiki
 2. Click **Create the first page**
 3. Title: `Home`
 4. Content:
@@ -99,7 +99,7 @@ git push -u origin main
 
 **Expected results:**
 - Workflow should complete successfully (green checkmark)
-- Wiki page updated at: https://github.com/AntonMFernando-NOAA/wiki/wiki/Daily-Updates
+- Wiki page updated at: https://github.com/AntonMFernando-NOAA/wiki-automation/wiki/Daily-Updates
 - First entry should show yesterday's activity across all your repos
 
 ---
@@ -141,7 +141,7 @@ After migration, you can disable the global-workflow wiki:
 - Expandable details section
 
 **Updates THIS repository's wiki at:**
-- https://github.com/AntonMFernando-NOAA/wiki/wiki/Daily-Updates
+- https://github.com/AntonMFernando-NOAA/wiki-automation/wiki/Daily-Updates
 - Runs Monday-Friday at 06:00 UTC
 - Newest entries appear at the top
 
@@ -158,7 +158,7 @@ After completing all steps:
 - [ ] Secret `WIKI_PAT` configured in repository settings
 - [ ] GitHub Actions enabled with read/write permissions
 - [ ] Workflow test run completed successfully
-- [ ] Wiki page exists at: https://github.com/AntonMFernando-NOAA/wiki/wiki/Daily-Updates
+- [ ] Wiki page exists at: https://github.com/AntonMFernando-NOAA/wiki-automation/wiki/Daily-Updates
 - [ ] (Optional) Content migrated from global-workflow wiki
 - [ ] (Optional) global-workflow wiki disabled
 

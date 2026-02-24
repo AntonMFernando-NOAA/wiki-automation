@@ -68,7 +68,7 @@ if [ -d "temp-wiki-automation-wiki" ]; then
     rm -rf temp-wiki-automation-wiki
 fi
 
-git clone ${GIT_URL_PREFIX}/AntonMFernando-NOAA/wiki.wiki.git temp-wiki-automation-wiki || {
+git clone ${GIT_URL_PREFIX}/AntonMFernando-NOAA/wiki-automation.wiki.git temp-wiki-automation-wiki || {
     echo "⚠️  Could not clone wiki-automation wiki"
     echo "Make sure:"
     echo "  1. Repository exists: https://github.com/AntonMFernando-NOAA/wiki"

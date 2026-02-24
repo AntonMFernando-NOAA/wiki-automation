@@ -9,7 +9,7 @@ This repository contains GitHub Actions automation that:
 - **Tracks daily activity**: commits, PRs, and issues
 - **Updates THIS repository's wiki** with daily summaries at 06:00 UTC (weekdays only)
 
-📖 **Wiki Location**: https://github.com/AntonMFernando-NOAA/wiki/wiki
+📖 **Wiki Location**: https://github.com/AntonMFernando-NOAA/wiki-automation/wiki
 
 ## Features
 
@@ -76,7 +76,7 @@ Go to: https://github.com/AntonMFernando-NOAA/wiki/actions
 
 ### Output Format
 
-**Wiki page**: https://github.com/AntonMFernando-NOAA/wiki/wiki/Daily-Updates
+**Wiki page**: https://github.com/AntonMFernando-NOAA/wiki-automation/wiki/Daily-Updates
 
 Each entry includes:
 - **Date header**: Tuesday, February 24, 2026

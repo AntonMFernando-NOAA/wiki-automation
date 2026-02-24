@@ -45,7 +45,7 @@ if git remote get-url origin &>/dev/null; then
     echo "✅ Remote already configured"
 else
     echo "Adding remote..."
-    git remote add origin https://github.com/AntonMFernando-NOAA/wiki.git
+    git remote add origin https://github.com/AntonMFernando-NOAA/wiki-automation.git
 fi
 
 git branch -M main
@@ -109,7 +109,7 @@ git clone ${GIT_PREFIX}/AntonMFernando-NOAA/global-workflow.wiki.git temp-source
 
 # Clone wiki-automation wiki
 echo "Cloning wiki-automation wiki..."
-git clone ${GIT_PREFIX}/AntonMFernando-NOAA/wiki.wiki.git temp-target-wiki || {
+git clone ${GIT_PREFIX}/AntonMFernando-NOAA/wiki-automation.wiki.git temp-target-wiki || {
     echo "❌ Could not clone wiki-automation wiki"
     echo "   Make sure wiki is enabled and initialized"
     rm -rf temp-source-wiki
