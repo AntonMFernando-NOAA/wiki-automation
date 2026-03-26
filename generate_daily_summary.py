@@ -143,6 +143,32 @@ try:
 except Exception as e:
     print(f"Warning — open PRs: {e}", file=sys.stderr)
 
+# Open PRs created today (catches PRs that have since been updated — important
+# for backfill runs and for draft PRs opened on this date)
+_seen_urls = {p["url"] for p in all_prs}
+try:
+    for item in gh_get(
+        "https://api.github.com/search/issues",
+        {"q": f"author:{GITHUB_ACTOR} is:pr is:open created:{date_str}..{date_str}"},
+    ):
+        if item["html_url"] in _seen_urls:
+            continue
+        repo = item.get("repository_url", "").replace("https://api.github.com/repos/", "")
+        all_prs.append({
+            "repo":        repo.split("/")[-1],
+            "repo_full":   repo,
+            "number":      item["number"],
+            "title":       item["title"],
+            "state":       "open",
+            "draft":       item.get("draft", False),
+            "created_at":  item.get("created_at", ""),
+            "branch":      "",
+            "body":        (item.get("body") or "")[:300],
+            "url":         item["html_url"],
+        })
+except Exception as e:
+    print(f"Warning — open PRs (created today): {e}", file=sys.stderr)
+
 # Issues updated today
 try:
     for item in gh_get(

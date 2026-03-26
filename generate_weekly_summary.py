@@ -149,6 +149,32 @@ try:
 except Exception as e:
     print(f"Warning — open PRs search: {e}", file=sys.stderr)
 
+# Open PRs created this week (catches PRs that have since been updated —
+# important for backfill runs and for draft PRs opened during the week)
+_seen_urls = {p["url"] for p in all_prs}
+try:
+    for item in gh_get(
+        "https://api.github.com/search/issues",
+        {"q": f"author:{GITHUB_ACTOR} is:pr is:open created:{start_str}..{end_str}"},
+    ):
+        if item["html_url"] in _seen_urls:
+            continue
+        repo = item.get("repository_url", "").replace("https://api.github.com/repos/", "")
+        all_prs.append({
+            "repo":        repo.split("/")[-1],
+            "repo_full":   repo,
+            "number":      item["number"],
+            "title":       item["title"],
+            "state":       "open",
+            "draft":       item.get("draft", False),
+            "created_at":  item.get("created_at", ""),
+            "branch":      "",
+            "body":        (item.get("body") or "")[:300],
+            "url":         item["html_url"],
+        })
+except Exception as e:
+    print(f"Warning — open PRs (created this week): {e}", file=sys.stderr)
+
 # ── Commit & branch-work collection (full repo+branch scan) ──────────────────
 # Skip any merge/sync/automated commit — filter broadly so stale branch noise
 # never leaks into the work summary

@@ -21,8 +21,10 @@ effort.
 
 Each summary contains:
 
-- **Pull Requests** — all PRs opened or merged in the period (open PRs are
-  always kept in the table even if no new commits were made).
+- **Pull Requests** — all PRs opened or merged in the period. Open PRs are
+  shown in the table if they were opened **or** had commits pushed in the
+  period. Draft PRs are marked with a ⬜ badge. Only PRs with real commits
+  appear in the Work Summary narrative.
 - **Issues** — issues opened or closed in the period.
 - **Branch Work** — commits pushed to branches that don't yet have a PR,
   grouped by `repo/branch`.
@@ -141,12 +143,22 @@ track_repos:
 ignore_repos:
   - test-automation
   - some-fork
+
+# Disable specific scheduled (cron) runs.
+# Manual workflow_dispatch triggers are NEVER blocked.
+# Default: true (all run on schedule).
+enable_daily:   true
+enable_weekly:  true
+enable_monthly: true
 ```
 
 | Key | Default | Behaviour |
-|-----|---------|-----------|
+|-----|---------|----------|
 | `track_repos` | `[]` (empty) | Empty = auto-scan the 40 most-recently-updated repos. Non-empty = explicit allowlist, no cap. |
 | `ignore_repos` | `[]` (empty) | Repos in this list are always skipped. |
+| `enable_daily` | `true` | Set to `false` to prevent the daily cron from running. |
+| `enable_weekly` | `true` | Set to `false` to prevent the weekly cron from running. |
+| `enable_monthly` | `true` | Set to `false` to prevent the monthly cron from running. |
 
 > **Note:** `pyyaml` must be available in the runner environment for
 > `config.yml` to be loaded. If it is missing, the scripts fall back to
@@ -183,12 +195,18 @@ GitHub Actions runner
   2. Runs the summary script
         |-- Reads config.yml (track_repos / ignore_repos)
         |-- Searches GitHub for PRs and issues authored by GITHUB_ACTOR
+        |   (two searches per type: updated in window + created in window,
+        |   deduplicated — ensures backfill runs capture PRs that have
+        |   been updated after the target date)
         |-- Scans every branch in every qualifying repo for commits
         |   authored by GITHUB_ACTOR within the time window
         |   (merge commits, sync commits, and automated bumps are filtered)
         |     |-- Commits on a PR branch  --> attributed to that PR
+        |     |   (fork-based PRs: fetches commits from the fork repo,
+        |     |   not the base repo, so cross-org PRs are captured)
         |     +-- Commits on a branch without a PR --> collected as Branch Work
         |-- Open PRs with no real commits are kept in the PR table
+        |   (draft PRs always appear in the table on the day they were opened)
         |   but omitted from the Work Summary narrative
         |-- Calls GitHub Models API (gpt-4o-mini) for a first-person
         |   narrative paragraph (falls back to a template if unavailable)
@@ -224,6 +242,8 @@ avoid noise from automated processes and merge operations:
 | Workflow not visible under Actions | Workflow YAML not in `.github/workflows/` | Confirm files are committed to the default branch |
 | Branch work not appearing | All commits on the branch match noise-filter patterns | Check that at least one commit message doesn't match `SKIP_RE` |
 | `config.yml` ignored or warning printed | `pyyaml` not installed | Add `pip install pyyaml` to the workflow's setup step |
+| Draft PR or new PR missing on backfill | PR was updated after the target date, so `updated:` search misses it | The scripts also run a `created:` search — ensure the PAT has `repo` scope on the repo where the PR lives |
+| Scheduled run fires but writes nothing | `enable_daily` / `enable_weekly` / `enable_monthly` set to `false` in `config.yml` | Expected behaviour — set back to `true` or trigger manually |
 
 ---
 
