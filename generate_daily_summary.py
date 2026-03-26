@@ -104,7 +104,8 @@ try:
             "number":      item["number"],
             "title":       item["title"],
             "state":       "merged",
-            "had_commits": True,
+            "draft":       False,
+            "created_at":  item.get("created_at", ""),
             "branch":      "",
             "body":        (item.get("body") or "")[:300],
             "url":         item["html_url"],
@@ -125,7 +126,8 @@ try:
             "number":      item["number"],
             "title":       item["title"],
             "state":       "open",
-            "had_commits": None,  # determined after push-event scan
+            "draft":       item.get("draft", False),
+            "created_at":  item.get("created_at", ""),
             "branch":      "",
             "body":        (item.get("body") or "")[:300],
             "url":         item["html_url"],
@@ -164,9 +166,7 @@ SKIP_RE = re.compile(
     re.I,
 )
 
-commit_messages    = []
-branch_work_commits: dict = {}   # {"repo/branch": [msg, ...]} – no-PR branches
-active_pr_branches: set  = set() # (repo_full, branch) that have commits in window + a PR
+branch_work_commits: dict = {}   # {"repo/branch": [msg, ...]} – all branches with commits
 _default_branch_cache: dict = {}
 
 
@@ -235,7 +235,11 @@ try:
         owner      = repo_full.split("/")[0]
 
         # Default branch commits
-        commit_messages.extend(_branch_msgs(repo_full, default_br))
+        _def_msgs = _branch_msgs(repo_full, default_br)
+        if _def_msgs:
+            branch_work_commits.setdefault(
+                f"{repo_data['name']}/{default_br}", []
+            ).extend(_def_msgs)
 
         # All other branches
         try:
@@ -249,69 +253,33 @@ try:
             msgs = _branch_msgs(repo_full, branch)
             if not msgs:
                 continue
-            try:
-                pr_list = gh_get(
-                    f"https://api.github.com/repos/{repo_full}/pulls",
-                    {"head": f"{owner}:{branch}", "state": "all"},
-                )
-            except Exception:
-                pr_list = []
-            if pr_list:
-                active_pr_branches.add((repo_full, branch))
-                commit_messages.extend(msgs)
-            else:
-                key = f"{repo_data['name']}/{branch}"
-                branch_work_commits.setdefault(key, []).extend(msgs)
+            key = f"{repo_data['name']}/{branch}"
+            branch_work_commits.setdefault(key, []).extend(msgs)
 except Exception as e:
     print(f"Warning — repo/branch scan: {e}", file=sys.stderr)
 
-# Mark which open PRs had commits in this window (for narrative filtering)
-for p in all_prs:
-    if p["state"] != "open":
-        continue
-    try:
-        detail = requests.get(
-            f"https://api.github.com/repos/{p['repo_full']}/pulls/{p['number']}",
-            headers=GH_HEADERS,
-        ).json()
-        branch = detail.get("head", {}).get("ref", "")
-        p["branch"]      = branch
-        if (p["repo_full"], branch) in active_pr_branches:
-            p["had_commits"] = True
-        elif branch:
-            # PR may be in a repo the user contributes to but doesn't own — scan it directly
-            msgs = _branch_msgs(p["repo_full"], branch)
-            p["had_commits"] = bool(msgs)
-            if msgs:
-                active_pr_branches.add((p["repo_full"], branch))
-                commit_messages.extend(msgs)
-        else:
-            p["had_commits"] = False
-    except Exception:
-        p["had_commits"] = True  # safe default: include in narrative
 
 # ── Narrative generation ──────────────────────────────────────────────────────
 def _template_narrative(prs, commits, branch_work):
-    narrative_prs = [p for p in prs if p.get("had_commits", True)]
-    if not narrative_prs and not commits and not branch_work:
+    narrative_prs = [p for p in prs
+                     if p["state"] == "merged" or _in_window(p.get("created_at", ""))]
+    if not narrative_prs and not branch_work:
         return f"_No activity recorded for {SUMMARY_DATE.strftime('%B %d, %Y')}._"
     parts = []
     if narrative_prs:
         titles = "; ".join(f"[#{p['number']}]({p['url']}) {p['title'][:60]}" for p in narrative_prs[:3])
-        parts.append(f"Pull request activity centred on: {titles}.")
-    if commits:
-        unique = list(dict.fromkeys(commits[:6]))
-        parts.append(f"Commit work included: {'; '.join(unique[:4])}.")
+        parts.append(f"Pull request activity: {titles}.")
     if branch_work:
         branch_msgs = [m for msgs in branch_work.values() for m in msgs][:4]
-        parts.append(f"Branch work (no PR): {'; '.join(branch_msgs)}.")
+        parts.append(f"Branch work: {'; '.join(branch_msgs)}.")
     return " ".join(parts)
 
 
 def generate_narrative(prs, commits, branch_work):
-    # Only include open PRs that had commits pushed in the window
-    narrative_prs = [p for p in prs if p.get("had_commits", True)]
-    if not narrative_prs and not commits and not branch_work:
+    # Include merged PRs + PRs opened today; branch work drives the rest
+    narrative_prs = [p for p in prs
+                     if p["state"] == "merged" or _in_window(p.get("created_at", ""))]
+    if not narrative_prs and not branch_work:
         return f"_No activity recorded for {SUMMARY_DATE.strftime('%B %d, %Y')}._"
 
     pr_block = "\n".join(
@@ -320,8 +288,6 @@ def generate_narrative(prs, commits, branch_work):
         for p in narrative_prs
     ) or "None"
 
-    commit_block = "\n".join(f"- {m}" for m in commits[:20]) or "None"
-
     branch_block = "\n".join(
         f"- [{b}]: {'; '.join(msgs[:3])}"
         for b, msgs in branch_work.items()
@@ -329,12 +295,11 @@ def generate_narrative(prs, commits, branch_work):
 
     prompt = (
         f"Below is the GitHub activity for {SUMMARY_DATE.strftime('%A, %B %d, %Y')}.\n\n"
-        f"Pull Requests (with commits today):\n{pr_block}\n\n"
-        f"Commits on PR branches:\n{commit_block}\n\n"
-        f"Branch work (commits on branches without a PR):\n{branch_block}\n\n"
+        f"PRs opened or merged today:\n{pr_block}\n\n"
+        f"Branch work (commits on all branches):\n{branch_block}\n\n"
         "Write a concise 2–4 sentence first-person narrative work summary (use 'I', not 'the developer'). "
         "Describe the theme and purpose of the work, not individual commits. "
-        "Include work done directly in branches even if no PR exists yet. "
+        "Include work done in all branches. "
         "Mention specific variable names, components, or files only when central to the changes. "
         "When referencing a PR, use its markdown link exactly as given in the input (e.g. [#123](url)). "
         "Do NOT use bullet points. Write in plain prose as a single paragraph. "
@@ -378,6 +343,7 @@ def status_badge(state, is_issue=False):
     return {
         "merged": "🟣 Merged",
         "open":   "🟢 Open",
+        "draft":  "⬜ Draft",
         "closed": "✅ Closed" if is_issue else "🔴 Closed",
     }.get(state, state.title())
 
@@ -390,8 +356,9 @@ def build_pr_table(prs):
         "|---|------------|-------|--------|",
     ]
     for p in prs:
+        state_key = "draft" if p.get("draft") else p["state"]
         rows.append(
-            f"| [#{p['number']}]({p['url']}) | {p['repo']} | {p['title']} | {status_badge(p['state'])} |"
+            f"| [#{p['number']}]({p['url']}) | {p['repo']} | {p['title']} | {status_badge(state_key)} |"
         )
     return "\n".join(rows) + "\n"
 
@@ -429,7 +396,7 @@ def build_branch_work_table(branch_work):
 
 
 # ── Build output ──────────────────────────────────────────────────────────────
-narrative    = generate_narrative(all_prs, commit_messages, branch_work_commits)
+narrative    = generate_narrative(all_prs, [], branch_work_commits)
 pr_table     = build_pr_table(all_prs)
 iss_table    = build_issue_table(all_issues)
 branch_table = build_branch_work_table(branch_work_commits)

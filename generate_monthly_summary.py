@@ -212,6 +212,10 @@ def collect_branch_work():
                 branches = gh_get(f"https://api.github.com/repos/{repo_full}/branches")
             except Exception:
                 branches = []
+            # Default branch
+            _def_msgs = _branch_msgs(repo_full, default_br)
+            if _def_msgs:
+                branch_work.setdefault(f"{repo_data['name']}/{default_br}", []).extend(_def_msgs)
             for br_info in branches:
                 branch = br_info["name"]
                 if branch == default_br:
@@ -219,16 +223,8 @@ def collect_branch_work():
                 msgs = _branch_msgs(repo_full, branch)
                 if not msgs:
                     continue
-                try:
-                    pr_list = gh_get(
-                        f"https://api.github.com/repos/{repo_full}/pulls",
-                        {"head": f"{owner}:{branch}", "state": "all"},
-                    )
-                except Exception:
-                    pr_list = []
-                if not pr_list:
-                    key = f"{repo_data['name']}/{branch}"
-                    branch_work.setdefault(key, []).extend(msgs)
+                key = f"{repo_data['name']}/{branch}"
+                branch_work.setdefault(key, []).extend(msgs)
     except Exception as e:
         print(f"Warning — repo/branch scan: {e}", file=sys.stderr)
     return branch_work
@@ -246,7 +242,7 @@ def _template_narrative(prs, commits, branch_work):
         parts.append(f"Commit activity included: {msgs}.")
     if branch_work:
         branch_msgs = [m for msgs in branch_work.values() for m in msgs][:3]
-        parts.append(f"Branch work (no PR): {'; '.join(branch_msgs)}.")
+        parts.append(f"Branch work: {'; '.join(branch_msgs)}.")
     return " ".join(parts)
 
 def generate_narrative(prs, commits, branch_work):
@@ -272,7 +268,7 @@ def generate_narrative(prs, commits, branch_work):
         f"Below is the GitHub activity for {MONTH_LABEL}.\n\n"
         f"Merged Pull Requests:\n{pr_block}\n\n"
         f"Commits on PR branches:\n{commit_block}\n\n"
-        f"Branch work (commits on branches without a PR):\n{branch_block}\n\n"
+        f"Branch work (commits on all branches):\n{branch_block}\n\n"
         "Write a concise 3–5 sentence first-person narrative summary of the month's work (use 'I', not 'the developer'). "
         "Focus on the overall themes and goals, not individual items. "
         "Include work done directly in branches even if no PR was opened. "
