@@ -28,9 +28,11 @@ Each summary contains:
 - **Issues** — issues opened or closed in the period.
 - **Branch Work** — commits pushed to branches that don't yet have a PR,
   grouped by `repo/branch`.
+- **PR Review Participation** — PRs authored by others where you left a formal
+  review, an inline diff comment, or a conversation comment during the period.
 - **Work Summary** — an AI-generated first-person narrative covering only the
-  PRs and branches where real commits were made (merge commits, sync commits,
-  and automated bumps are filtered out).
+  activity categories that actually occurred (empty categories are never
+  mentioned).
 
 All workflows can also be triggered manually for any date range.
 
@@ -198,6 +200,10 @@ GitHub Actions runner
         |   (two searches per type: updated in window + created in window,
         |   deduplicated — ensures backfill runs capture PRs that have
         |   been updated after the target date)
+        |-- Collects PR review participation via the Events API
+        |   (PullRequestReviewEvent, PullRequestReviewCommentEvent,
+        |   and IssueCommentEvent on PRs — covers approvals, inline diff
+        |   comments, and regular conversation comments)
         |-- Scans every branch in every qualifying repo for commits
         |   authored by GITHUB_ACTOR within the time window
         |   (merge commits, sync commits, and automated bumps are filtered)
