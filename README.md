@@ -21,10 +21,9 @@ effort.
 
 Each summary contains:
 
-- **Pull Requests** — all PRs opened or merged in the period. Open PRs are
+- **Pull Requests** — all PRs draft/opened or merged in the period. Open PRs are
   shown in the table if they were opened **or** had commits pushed in the
-  period. Draft PRs are marked with a ⬜ badge. Only PRs with real commits
-  appear in the Work Summary narrative.
+  period. Only PRs with real commits appear in the Work Summary narrative.
 - **Issues** — issues opened or closed in the period.
 - **Branch Work** — commits pushed to branches that don't yet have a PR,
   grouped by `repo/branch`.
