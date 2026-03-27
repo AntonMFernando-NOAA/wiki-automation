@@ -203,6 +203,23 @@ try:
 except Exception as e:
     print(f"Warning — ready_for_review events: {e}", file=sys.stderr)
 
+# Deduplicate all_prs by URL keeping the highest-precedence state.
+# If the same PR appears via multiple searches (e.g. merged: AND updated:,
+# or created-as-draft AND rfr event), keep: merge > open > draft.
+_PR_PRIORITY = {"merged": 3, "open": 2, "draft": 1}
+_pr_by_url: dict = {}
+for _p in all_prs:
+    _sk = "draft" if _p.get("draft") else _p["state"]
+    _pri = _PR_PRIORITY.get(_sk, 0)
+    _existing = _pr_by_url.get(_p["url"])
+    if _existing is None:
+        _pr_by_url[_p["url"]] = _p
+    else:
+        _esk = "draft" if _existing.get("draft") else _existing["state"]
+        if _pri > _PR_PRIORITY.get(_esk, 0):
+            _pr_by_url[_p["url"]] = _p
+all_prs = list(_pr_by_url.values())
+
 # Issues updated today
 try:
     for item in gh_get(
