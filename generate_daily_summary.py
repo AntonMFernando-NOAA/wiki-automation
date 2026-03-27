@@ -260,20 +260,27 @@ try:
 except Exception as e:
     print(f"Warning — created issues: {e}", file=sys.stderr)
 
-# PR reviews submitted today (via Events API)
+# PR reviews submitted today (via Events API).
+# Captures formal reviews (approve/request-changes/comment) AND inline comment
+# events so that review participation is recorded even without a formal submit.
 pr_reviews: list = []
+_seen_review_urls: set = set()
 try:
     for event in gh_get(f"https://api.github.com/users/{GITHUB_ACTOR}/events"):
-        if event.get("type") != "PullRequestReviewEvent":
+        evt_type = event.get("type", "")
+        if evt_type not in ("PullRequestReviewEvent", "PullRequestReviewCommentEvent"):
             continue
         if not in_window(event.get("created_at", "")):
             continue
         payload = event.get("payload", {})
-        review  = payload.get("review", {})
         pr      = payload.get("pull_request", {})
-        if not pr:
+        if not pr or pr.get("html_url") in _seen_review_urls:
             continue
-        state = review.get("state", "").lower()  # approved / changes_requested / commented
+        _seen_review_urls.add(pr["html_url"])
+        if evt_type == "PullRequestReviewEvent":
+            state = payload.get("review", {}).get("state", "commented").lower()
+        else:
+            state = "commented"
         pr_reviews.append({
             "number": pr.get("number"),
             "title":  pr.get("title", ""),
@@ -459,41 +466,46 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
     if not narrative_prs and not commits and not branch_work and not created_issues and not pr_reviews:
         return f"_No activity recorded for {SUMMARY_DATE.strftime('%B %d, %Y')}._"
 
-    pr_block = "\n".join(
+    pr_block     = "\n".join(
         f"- [#{p['number']}]({p['url']}) ({p['state']}) [{p['repo']}]: {p['title']}"
         + (f"\n  {p['body'][:200]}" if p["body"].strip() else "")
         for p in narrative_prs
-    ) or "None"
-
-    commit_block = "\n".join(f"- {m}" for m in commits[:20]) or "None"
-
+    ) or ""
+    commit_block = "\n".join(f"- {m}" for m in commits[:20]) or ""
     branch_block = "\n".join(
         f"- Branch {b}: {'; '.join(msgs[:3])}"
         for b, msgs in branch_work.items()
-    ) or "None"
-
-    issue_block = "\n".join(
+    ) or ""
+    issue_block  = "\n".join(
         f"- [#{i['number']}]({i['url']}) [{i['repo']}]: {i['title']}"
         for i in created_issues
-    ) or "None"
-
+    ) or ""
     review_block = "\n".join(
         f"- [#{r['number']}]({r['url']}) [{r['repo']}]: {r['title']} ({r['state']})"
         for r in pr_reviews
-    ) or "None"
+    ) or ""
+
+    # Only include sections that have content so the LLM can't mention empty categories
+    activity_sections = []
+    if pr_block:
+        activity_sections.append(f"Pull Requests (with commits today):\n{pr_block}")
+    if commit_block:
+        activity_sections.append(f"Commits on PR branches:\n{commit_block}")
+    if branch_block:
+        activity_sections.append(f"Branch work (no PR yet):\n{branch_block}")
+    if issue_block:
+        activity_sections.append(f"Issues opened today:\n{issue_block}")
+    if review_block:
+        activity_sections.append(f"PRs reviewed today:\n{review_block}")
+    activity_text = "\n\n".join(activity_sections) or "No activity recorded."
 
     prompt = (
         f"Below is the GitHub activity for {SUMMARY_DATE.strftime('%A, %B %d, %Y')}.\n\n"
-        f"Pull Requests (with commits today):\n{pr_block}\n\n"
-        f"Commits on PR branches:\n{commit_block}\n\n"
-        f"Branch work (commits on branches without a PR):\n{branch_block}\n\n"
-        f"Issues opened today:\n{issue_block}\n\n"
-        f"PRs reviewed today:\n{review_block}\n\n"
+        f"{activity_text}\n\n"
         "Write a concise 2–4 sentence first-person narrative work summary (use 'I', not 'the developer'). "
+        "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
         "Describe the theme and purpose of the work, not individual commits. "
         "Include work done directly in branches even if no PR exists yet. "
-        "Mention issues opened and PRs reviewed where relevant. "
-        "Mention specific variable names, components, or files only when central to the changes. "
         "When referencing a PR or issue, use its markdown link exactly as given in the input (e.g. [#123](url)). "
         "Do NOT use bullet points. Write in plain prose as a single paragraph. "
         "When referencing branch work, always use the full branch name exactly as given (e.g. repo-name/branch-name). "

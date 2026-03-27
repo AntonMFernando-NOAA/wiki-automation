@@ -264,12 +264,15 @@ def collect_created_issues():
         return []
 
 def collect_pr_reviews():
-    """PRs reviewed this month (deduped by PR URL)."""
+    """PRs reviewed this month (deduped by PR URL).
+    Captures formal reviews AND inline comment events.
+    """
     reviews = []
     seen: set = set()
     try:
         for event in gh_get(f"https://api.github.com/users/{GITHUB_ACTOR}/events"):
-            if event.get("type") != "PullRequestReviewEvent":
+            evt_type = event.get("type", "")
+            if evt_type not in ("PullRequestReviewEvent", "PullRequestReviewCommentEvent"):
                 continue
             ts = event.get("created_at", "")
             if not ts:
@@ -328,36 +331,45 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
             + (f"\n  {p['body'][:200]}" if p["body"].strip() else "")
             for p in prs
         )
-        or "None"
+        or ""
     )
-    commit_block = "\n".join(f"- {m}" for m in commits[:30]) or "None"
+    commit_block = "\n".join(f"- {m}" for m in commits[:30]) or ""
 
     branch_block = "\n".join(
         f"- Branch {b}: {'; '.join(msgs[:3])}"
         for b, msgs in branch_work.items()
-    ) or "None"
+    ) or ""
 
     issue_block = "\n".join(
         f"- [#{i['number']}]({i['url']}) [{i['repo']}]: {i['title']}"
         for i in created_issues
-    ) or "None"
+    ) or ""
 
     review_block = "\n".join(
         f"- [#{r['number']}]({r['url']}) [{r['repo']}]: {r['title']}"
         for r in pr_reviews
-    ) or "None"
+    ) or ""
+
+    # Only include sections that have content so the LLM can't mention empty categories
+    activity_sections = []
+    if pr_block:
+        activity_sections.append(f"Merged Pull Requests:\n{pr_block}")
+    if commit_block:
+        activity_sections.append(f"Commits on PR branches:\n{commit_block}")
+    if branch_block:
+        activity_sections.append(f"Branch work (no PR yet):\n{branch_block}")
+    if issue_block:
+        activity_sections.append(f"Issues opened this month:\n{issue_block}")
+    if review_block:
+        activity_sections.append(f"PRs reviewed this month:\n{review_block}")
+    activity_text = "\n\n".join(activity_sections) or "No activity recorded."
 
     prompt = (
         f"Below is the GitHub activity for {MONTH_LABEL}.\n\n"
-        f"Merged Pull Requests:\n{pr_block}\n\n"
-        f"Commits on PR branches:\n{commit_block}\n\n"
-        f"Branch work (commits on branches without a PR):\n{branch_block}\n\n"
-        f"Issues opened this month:\n{issue_block}\n\n"
-        f"PRs reviewed this month:\n{review_block}\n\n"
+        f"{activity_text}\n\n"
         "Write a concise 3–5 sentence first-person narrative summary of the month's work (use 'I', not 'the developer'). "
+        "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
         "Focus on the overall themes and goals, not individual items. "
-        "Include work done directly in branches even if no PR was opened. "
-        "Mention issues opened and PRs reviewed where relevant. "
         "Do NOT mention PR numbers, issue numbers, commit hashes, URLs, or weeks. "
         "Do NOT use bullet points. "
         "Write in plain prose as a single cohesive paragraph. "
