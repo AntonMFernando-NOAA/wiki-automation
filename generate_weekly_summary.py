@@ -545,7 +545,7 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
         "Focus on the themes and goals of the work, not individual commits. "
         "When referencing a PR or issue, use its markdown link exactly as given in the input (e.g. [#123](url)). "
         "Do NOT use bullet points. Write in plain prose as a single cohesive paragraph. "
-        "When referencing branch work, always use the full branch name exactly as given (e.g. repo-name/branch-name). "
+        "When referencing branch work, use the repository name branch belonged to and describe the tasks as in-progress. "
         "Naturally integrate the repository name into the narrative where relevant "
         "(e.g. 'in global-workflow', 'in GDASApp') so it is clear where each activity occurred. "
         "Output only the paragraph — no headings, no preamble."
