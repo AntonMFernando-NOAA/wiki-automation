@@ -67,6 +67,26 @@ except ImportError:
 
 _TRACK_REPOS  = {r.split("/")[-1] for r in (_cfg.get("track_repos") or [])}
 _IGNORE_REPOS = {r.split("/")[-1] for r in (_cfg.get("ignore_repos") or [])}
+_np_monthly   = (_cfg.get("narrative_prompts") or {}).get("monthly") or {}
+
+_DEFAULT_MONTHLY_SYSTEM = (
+    "You are writing a first-person monthly work log entry for a software developer. "
+    "Write as 'I' — never say 'the developer' or 'they'. "
+    "Be specific about what was worked on; avoid generic filler. "
+    "Never mention PR numbers, issue numbers, commit hashes, URLs, or specific week dates."
+)
+_DEFAULT_MONTHLY_USER_SUFFIX = (
+    "Write a concise 3–5 sentence first-person narrative summary of the month's work (use 'I', not 'the developer'). "
+    "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
+    "Focus on the overall themes and goals, not individual items. "
+    "Do NOT mention PR numbers, issue numbers, commit hashes, URLs, or weeks. "
+    "Do NOT use bullet points. "
+    "Write in plain prose as a single cohesive paragraph. "
+    "When referencing branch work, use the repo name the branch belonged to and consider these are ongoing work. "
+    "Naturally integrate the repository name into the narrative where relevant "
+    "(e.g. 'in global-workflow', 'in GDASApp') so it is clear where each activity occurred. "
+    "Output only the paragraph — no headings, no preamble."
+)
 
 # ── Schedule-disable check ────────────────────────────────────────────────────
 if _cfg.get("enable_monthly", True) is False:
@@ -392,19 +412,13 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
         activity_sections.append(f"PRs reviewed this month:\n{review_block}")
     activity_text = "\n\n".join(activity_sections) or "No activity recorded."
 
+    system_msg  = (_np_monthly.get("system")      or _DEFAULT_MONTHLY_SYSTEM).strip()
+    user_suffix = (_np_monthly.get("user_suffix") or _DEFAULT_MONTHLY_USER_SUFFIX).strip()
+
     prompt = (
         f"Below is the GitHub activity for {MONTH_LABEL}.\n\n"
         f"{activity_text}\n\n"
-        "Write a concise 3–5 sentence first-person narrative summary of the month's work (use 'I', not 'the developer'). "
-        "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
-        "Focus on the overall themes and goals, not individual items. "
-        "Do NOT mention PR numbers, issue numbers, commit hashes, URLs, or weeks. "
-        "Do NOT use bullet points. "
-        "Write in plain prose as a single cohesive paragraph. "
-        "When referencing branch work, use the repo name the branch belonged to and consider these are ongoing work. "
-        "Naturally integrate the repository name into the narrative where relevant "
-        "(e.g. 'in global-workflow', 'in GDASApp') so it is clear where each activity occurred. "
-        "Output only the paragraph — no headings, no preamble."
+        f"{user_suffix}"
     )
 
     try:
@@ -419,12 +433,7 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
                 "messages": [
                     {
                         "role": "system",
-                        "content": (
-                            "You are writing a first-person monthly work log entry for a software developer. "
-                            "Write as 'I' — never say 'the developer' or 'they'. "
-                            "Be specific about what was worked on; avoid generic filler. "
-                            "Never mention PR numbers, issue numbers, commit hashes, URLs, or specific week dates."
-                        ),
+                        "content": system_msg,
                     },
                     {"role": "user", "content": prompt},
                 ],

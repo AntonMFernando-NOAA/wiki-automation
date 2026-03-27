@@ -151,6 +151,18 @@ ignore_repos:
 enable_daily:   true
 enable_weekly:  true
 enable_monthly: true
+
+# Override the LLM prompts used to generate narrative summaries (all optional).
+narrative_prompts:
+  daily:
+    system: "You are writing a first-person daily work log …"
+    user_suffix: "Write a concise 2–4 sentence …"
+  weekly:
+    system: "You are writing a first-person weekly work log …"
+    user_suffix: "Write a concise 3–5 sentence …"
+  monthly:
+    system: "You are writing a first-person monthly work log …"
+    user_suffix: "Write a concise 3–5 sentence narrative summary …"
 ```
 
 | Key | Default | Behaviour |
@@ -160,6 +172,12 @@ enable_monthly: true
 | `enable_daily` | `true` | Set to `false` to prevent the daily cron from running. |
 | `enable_weekly` | `true` | Set to `false` to prevent the weekly cron from running. |
 | `enable_monthly` | `true` | Set to `false` to prevent the monthly cron from running. |
+| `narrative_prompts.daily.system` | _(built-in)_ | System role message for the daily LLM call. Omit to use the default. |
+| `narrative_prompts.daily.user_suffix` | _(built-in)_ | Instruction paragraph appended after activity data in the daily user message. |
+| `narrative_prompts.weekly.system` | _(built-in)_ | System role message for the weekly LLM call. |
+| `narrative_prompts.weekly.user_suffix` | _(built-in)_ | Instruction paragraph for the weekly user message. |
+| `narrative_prompts.monthly.system` | _(built-in)_ | System role message for the monthly LLM call. |
+| `narrative_prompts.monthly.user_suffix` | _(built-in)_ | Instruction paragraph for the monthly user message. |
 
 > **Note:** `pyyaml` must be available in the runner environment for
 > `config.yml` to be loaded. If it is missing, the scripts fall back to
@@ -260,5 +278,5 @@ avoid noise from automated processes and merge operations:
 | Change schedule | Edit the `cron` expression in the relevant workflow YAML |
 | Track a different user | Set the `GITHUB_ACTOR` repository variable |
 | Change wiki page names | Edit the filename references in the workflow's push step |
-| Adjust narrative style | Edit the system prompt string inside `generate_*.py` |
+| Adjust narrative style | Set `narrative_prompts.daily/weekly/monthly.system` and/or `user_suffix` in `config.yml` |
 | Add more noise-commit patterns | Extend the `SKIP_RE` regex near the top of each `generate_*.py` |

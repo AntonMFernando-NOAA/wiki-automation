@@ -50,6 +50,25 @@ except ImportError:
 
 _TRACK_REPOS  = {r.split("/")[-1] for r in (_cfg.get("track_repos") or [])}
 _IGNORE_REPOS = {r.split("/")[-1] for r in (_cfg.get("ignore_repos") or [])}
+_np_daily     = (_cfg.get("narrative_prompts") or {}).get("daily") or {}
+
+_DEFAULT_DAILY_SYSTEM = (
+    "You are writing a first-person daily work log entry for a software developer. "
+    "Write as 'I' — never say 'the developer' or 'they'. "
+    "Be specific about what was worked on; avoid generic filler sentences."
+)
+_DEFAULT_DAILY_USER_SUFFIX = (
+    "Write a concise 2–4 sentence first-person narrative work summary (use 'I', not 'the developer'). "
+    "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
+    "Describe the theme and purpose of the work, not individual commits. "
+    "Include work done directly in branches even if no PR exists yet. "
+    "When referencing a PR or issue, use its markdown link exactly as given in the input (e.g. [#123](url)). "
+    "Do NOT use bullet points. Write in plain prose as a single paragraph. "
+    "When referencing branch work, always use the full branch name exactly as given (e.g. repo-name/branch-name). "
+    "Naturally integrate the repository name into the narrative where relevant "
+    "(e.g. 'in global-workflow', 'in GDASApp') so it is clear where each activity occurred. "
+    "Output only the paragraph — no headings, no preamble."
+)
 
 # ── Schedule-disable check ────────────────────────────────────────────────────
 # If enable_daily is explicitly False in config.yml and this is a scheduled run,
@@ -534,19 +553,13 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
         activity_sections.append(f"PRs reviewed today:\n{review_block}")
     activity_text = "\n\n".join(activity_sections) or "No activity recorded."
 
+    system_msg  = (_np_daily.get("system")      or _DEFAULT_DAILY_SYSTEM).strip()
+    user_suffix = (_np_daily.get("user_suffix") or _DEFAULT_DAILY_USER_SUFFIX).strip()
+
     prompt = (
         f"Below is the GitHub activity for {SUMMARY_DATE.strftime('%A, %B %d, %Y')}.\n\n"
         f"{activity_text}\n\n"
-        "Write a concise 2–4 sentence first-person narrative work summary (use 'I', not 'the developer'). "
-        "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
-        "Describe the theme and purpose of the work, not individual commits. "
-        "Include work done directly in branches even if no PR exists yet. "
-        "When referencing a PR or issue, use its markdown link exactly as given in the input (e.g. [#123](url)). "
-        "Do NOT use bullet points. Write in plain prose as a single paragraph. "
-        "When referencing branch work, always use the full branch name exactly as given (e.g. repo-name/branch-name). "
-        "Naturally integrate the repository name into the narrative where relevant "
-        "(e.g. 'in global-workflow', 'in GDASApp') so it is clear where each activity occurred. "
-        "Output only the paragraph — no headings, no preamble."
+        f"{user_suffix}"
     )
 
     try:
@@ -561,11 +574,7 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
                 "messages": [
                     {
                         "role": "system",
-                        "content": (
-                            "You are writing a first-person daily work log entry for a software developer. "
-                            "Write as 'I' — never say 'the developer' or 'they'. "
-                            "Be specific about what was worked on; avoid generic filler sentences."
-                        ),
+                        "content": system_msg,
                     },
                     {"role": "user", "content": prompt},
                 ],

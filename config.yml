@@ -33,3 +33,60 @@ track_repos: []
 #     - some-fork
 ignore_repos:
   - AntonMFernando-NOAA/wiki-automation
+
+# ── Narrative prompt customisation ────────────────────────────────────────────
+# Override the LLM prompts used to generate narrative summaries.
+# All keys are optional — omit any key to use the built-in default.
+#
+# system       : The system role message that sets the LLM's persona/constraints.
+# user_suffix  : The instruction paragraph appended after the activity data in
+#                the user message. The activity block is always prepended automatically.
+#
+# Tip: copy the defaults shown below, then edit to suit your style.
+#
+# narrative_prompts:
+#   daily:
+#     system: |
+#       You are writing a first-person daily work log entry for a software developer.
+#       Write as 'I' — never say 'the developer' or 'they'.
+#       Be specific about what was worked on; avoid generic filler sentences.
+#     user_suffix: |
+#       Write a concise 2–4 sentence first-person narrative work summary (use 'I', not 'the developer').
+#       Only describe the categories listed above — do NOT mention or imply the absence of any category not listed.
+#       Describe the theme and purpose of the work, not individual commits.
+#       Include work done directly in branches even if no PR exists yet.
+#       When referencing a PR or issue, use its markdown link exactly as given in the input (e.g. [#123](url)).
+#       Do NOT use bullet points. Write in plain prose as a single paragraph.
+#       When referencing branch work, always use the full branch name exactly as given (e.g. repo-name/branch-name).
+#       Naturally integrate the repository name into the narrative where relevant (e.g. 'in global-workflow', 'in GDASApp') so it is clear where each activity occurred.
+#       Output only the paragraph — no headings, no preamble.
+#   weekly:
+#     system: |
+#       You are writing a first-person weekly work log entry for a software developer.
+#       Write as 'I' — never say 'the developer' or 'they'.
+#       Be specific about what was worked on; avoid generic filler sentences.
+#     user_suffix: |
+#       Write a concise 3–5 sentence first-person narrative work summary (use 'I', not 'the developer').
+#       Only describe the categories listed above — do NOT mention or imply the absence of any category not listed.
+#       Focus on the themes and goals of the work, not individual commits.
+#       When referencing a PR or issue, use its markdown link exactly as given in the input (e.g. [#123](url)).
+#       Do NOT use bullet points. Write in plain prose as a single cohesive paragraph.
+#       When referencing branch work, use the repository name branch belonged to and describe the tasks as in-progress.
+#       Naturally integrate the repository name into the narrative where relevant (e.g. 'in global-workflow', 'in GDASApp') so it is clear where each activity occurred.
+#       Output only the paragraph — no headings, no preamble.
+#   monthly:
+#     system: |
+#       You are writing a first-person monthly work log entry for a software developer.
+#       Write as 'I' — never say 'the developer' or 'they'.
+#       Be specific about what was worked on; avoid generic filler.
+#       Never mention PR numbers, issue numbers, commit hashes, URLs, or specific week dates.
+#     user_suffix: |
+#       Write a concise 3–5 sentence first-person narrative summary of the month's work (use 'I', not 'the developer').
+#       Only describe the categories listed above — do NOT mention or imply the absence of any category not listed.
+#       Focus on the overall themes and goals, not individual items.
+#       Do NOT mention PR numbers, issue numbers, commit hashes, URLs, or weeks.
+#       Do NOT use bullet points.
+#       Write in plain prose as a single cohesive paragraph.
+#       When referencing branch work, use the repo name the branch belonged to and consider these are ongoing work.
+#       Naturally integrate the repository name into the narrative where relevant (e.g. 'in global-workflow', 'in GDASApp') so it is clear where each activity occurred.
+#       Output only the paragraph — no headings, no preamble.
