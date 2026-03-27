@@ -169,6 +169,40 @@ try:
 except Exception as e:
     print(f"Warning — open PRs (created today): {e}", file=sys.stderr)
 
+# PRs converted from draft to ready-for-review today (via Events API).
+# The search API misses these on backfill runs because updated_at has since
+# advanced past the target date. The Events API records the exact transition.
+_seen_urls_rfr = {p["url"] for p in all_prs}
+try:
+    for event in gh_get(f"https://api.github.com/users/{GITHUB_ACTOR}/events"):
+        if event.get("type") != "PullRequestEvent":
+            continue
+        payload = event.get("payload", {})
+        if payload.get("action") != "ready_for_review":
+            continue
+        if not in_window(event.get("created_at", "")):
+            continue
+        pr = payload.get("pull_request", {})
+        if not pr or pr.get("html_url") in _seen_urls_rfr:
+            continue
+        base_repo = (pr.get("base") or {}).get("repo") or {}
+        all_prs.append({
+            "repo":          base_repo.get("name", ""),
+            "repo_full":     base_repo.get("full_name", ""),
+            "number":        pr["number"],
+            "title":         pr["title"],
+            "state":         "open",
+            "draft":         False,
+            "had_rfr_event": True,
+            "created_at":    pr.get("created_at", ""),
+            "branch":        (pr.get("head") or {}).get("ref", ""),
+            "body":          (pr.get("body") or "")[:300],
+            "url":           pr["html_url"],
+        })
+        _seen_urls_rfr.add(pr["html_url"])
+except Exception as e:
+    print(f"Warning — ready_for_review events: {e}", file=sys.stderr)
+
 # Issues updated today
 try:
     for item in gh_get(
@@ -332,7 +366,7 @@ for p in all_prs:
 
 # ── Narrative generation ──────────────────────────────────────────────────────
 def _template_narrative(prs, commits, branch_work):
-    narrative_prs = [p for p in prs if p.get("had_commits", True)]
+    narrative_prs = [p for p in prs if p.get("had_commits", True) or p.get("had_rfr_event")]
     if not narrative_prs and not commits and not branch_work:
         return f"_No activity recorded for {SUMMARY_DATE.strftime('%B %d, %Y')}._"
     parts = []
@@ -350,7 +384,7 @@ def _template_narrative(prs, commits, branch_work):
 
 def generate_narrative(prs, commits, branch_work):
     # Only include open PRs that had commits pushed in the window
-    narrative_prs = [p for p in prs if p.get("had_commits", True)]
+    narrative_prs = [p for p in prs if p.get("had_commits", True) or p.get("had_rfr_event")]
     if not narrative_prs and not commits and not branch_work:
         return f"_No activity recorded for {SUMMARY_DATE.strftime('%B %d, %Y')}._"
 
@@ -475,7 +509,8 @@ def build_branch_work_table(branch_work):
 narrative    = generate_narrative(all_prs, commit_messages, branch_work_commits)
 pr_table     = build_pr_table([p for p in all_prs
                                if p.get("had_commits", True)
-                               or in_window(p.get("created_at", ""))])
+                               or in_window(p.get("created_at", ""))
+                               or p.get("had_rfr_event")])
 iss_table    = build_issue_table(all_issues)
 branch_table = build_branch_work_table(branch_work_commits)
 
