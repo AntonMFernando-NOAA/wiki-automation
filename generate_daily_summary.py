@@ -68,6 +68,14 @@ def _should_scan(repo_data):
         return name in _TRACK_REPOS
     return True
 
+def _should_include_repo(name):
+    """Same logic as _should_scan but accepts a bare repo name string."""
+    if _IGNORE_REPOS and name in _IGNORE_REPOS:
+        return False
+    if _TRACK_REPOS:
+        return name in _TRACK_REPOS
+    return True
+
 
 # ── GitHub REST helper ────────────────────────────────────────────────────────
 def gh_get(url, params=None):
@@ -219,6 +227,7 @@ for _p in all_prs:
         if _pri > _PR_PRIORITY.get(_esk, 0):
             _pr_by_url[_p["url"]] = _p
 all_prs = list(_pr_by_url.values())
+all_prs = [p for p in all_prs if _should_include_repo(p["repo"])]
 
 # Issues updated today
 try:
@@ -237,6 +246,7 @@ try:
         })
 except Exception as e:
     print(f"Warning — issues: {e}", file=sys.stderr)
+all_issues = [i for i in all_issues if _should_include_repo(i["repo"])]
 
 # Issues created today (separate from updated — catches new issues on backfill)
 _seen_issue_urls = {i["url"] for i in all_issues}
@@ -259,6 +269,7 @@ try:
         _seen_issue_urls.add(item["html_url"])
 except Exception as e:
     print(f"Warning — created issues: {e}", file=sys.stderr)
+created_issues = [i for i in created_issues if _should_include_repo(i["repo"])]
 
 # PR reviews submitted today (via Events API).
 # Captures formal reviews (approve/request-changes/comment), inline diff
@@ -309,6 +320,7 @@ try:
         })
 except Exception as e:
     print(f"Warning — PR reviews: {e}", file=sys.stderr)
+pr_reviews = [r for r in pr_reviews if _should_include_repo(r["repo"])]
 
 # ── Commit & branch-work collection (full repo+branch scan) ──────────────────
 # Skip any merge/sync/automated commit — filter broadly so stale branch noise

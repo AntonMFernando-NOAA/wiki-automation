@@ -83,6 +83,14 @@ def _should_scan(repo_data):
         return name in _TRACK_REPOS
     return True
 
+def _should_include_repo(name):
+    """Same logic as _should_scan but accepts a bare repo name string."""
+    if _IGNORE_REPOS and name in _IGNORE_REPOS:
+        return False
+    if _TRACK_REPOS:
+        return name in _TRACK_REPOS
+    return True
+
 
 # ── GitHub REST helper ────────────────────────────────────────────────────────
 def gh_get(url, params=None):
@@ -141,6 +149,7 @@ def collect_merged_prs():
                 "body":   (pr.get("body") or "")[:300],
             }
             for pr in items
+            if _should_include_repo(pr.get("repository_url", "").split("/")[-1])
         ]
     except Exception as e:
         print(f"Warning — merged PRs: {e}", file=sys.stderr)
@@ -258,6 +267,7 @@ def collect_created_issues():
                 "url":    i["html_url"],
             }
             for i in items
+            if _should_include_repo(i.get("repository_url", "").split("/")[-1])
         ]
     except Exception as e:
         print(f"Warning — created issues: {e}", file=sys.stderr)
@@ -311,7 +321,7 @@ def collect_pr_reviews():
             })
     except Exception as e:
         print(f"Warning — PR reviews: {e}", file=sys.stderr)
-    return reviews
+    return [r for r in reviews if _should_include_repo(r["repo"])]
 
 # ── Narrative generation ──────────────────────────────────────────────────────
 def _template_narrative(prs, commits, branch_work, created_issues=None, pr_reviews=None):
