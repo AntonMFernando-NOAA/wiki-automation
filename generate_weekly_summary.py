@@ -519,7 +519,7 @@ pr_table     = build_pr_table([p for p in all_prs
 branch_table = build_branch_work_table(branch_work_commits)
 
 sections = [
-    f"## Week of {MONDAY.strftime('%B %d')}–{FRIDAY.strftime('%d, %Y')}\n"
+    f"## Week of {MONDAY.strftime('%B')} {MONDAY.day}–{FRIDAY.day}, {FRIDAY.year}\n"
     f"_Automatically maintained log of weekly GitHub activity._",
     "",
     "### 🔀 Pull Requests",

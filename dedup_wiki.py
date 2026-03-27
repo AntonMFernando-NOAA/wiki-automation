@@ -25,10 +25,19 @@ def parse_date(line):
             return datetime.strptime(m.group(1).strip(), "%B %Y")
         except ValueError:
             pass
-    # Weekly section: "## Week of March 23, 2026"
+    # Weekly section: "## Week of March 23–27, 2026" (date range)
     if line.startswith("## Week of "):
+        rest = line[11:]  # e.g. "March 23–27, 2026"
+        # Range format: "Month DD–DD, YYYY" or "Month DD–Month DD, YYYY"
+        m2 = re.match(r"([A-Za-z]+ \d+)[\u2013\u2014\-](?:[A-Za-z]+ )?\d+, (\d{4})", rest)
+        if m2:
+            try:
+                return datetime.strptime(f"{m2.group(1)}, {m2.group(2)}", "%B %d, %Y")
+            except ValueError:
+                pass
+        # Fallback: single date "Month DD, YYYY"
         try:
-            return datetime.strptime(line[11:], "%B %d, %Y")
+            return datetime.strptime(rest, "%B %d, %Y")
         except ValueError:
             pass
     # Daily section: "## March 26, 2026"
@@ -67,8 +76,8 @@ txt = open(wiki_file, encoding="utf-8").read()
 if monthly:
     key_m = re.match(r"(- \*\*[^*]+\*\*:)", first_line.strip())
     if key_m:
-        txt = re.sub(re.escape(key_m.group(1)) + r".*?\n(?=\n|\Z)", "",
-                     txt, count=1, flags=re.DOTALL)
+        txt = re.sub(re.escape(key_m.group(1)) + r".*?(?=\n- \*\*|\Z)",
+                     "", txt, count=1, flags=re.DOTALL)
 else:
     # Use date-based matching to handle format differences (e.g. "March 4" vs "March 04")
     if new_date is not None:
