@@ -239,9 +239,64 @@ def collect_branch_work():
         print(f"Warning — repo/branch scan: {e}", file=sys.stderr)
     return branch_work
 
+def collect_created_issues():
+    """Issues created this month."""
+    last_day = calendar.monthrange(year, month)[1]
+    try:
+        items = gh_get(
+            "https://api.github.com/search/issues",
+            {"q": (
+                f"author:{GITHUB_ACTOR} is:issue "
+                f"created:{year}-{month:02d}-01..{year}-{month:02d}-{last_day:02d}"
+            )},
+        )
+        return [
+            {
+                "title":  i["title"],
+                "number": i["number"],
+                "repo":   i.get("repository_url", "").split("/")[-1],
+                "url":    i["html_url"],
+            }
+            for i in items
+        ]
+    except Exception as e:
+        print(f"Warning — created issues: {e}", file=sys.stderr)
+        return []
+
+def collect_pr_reviews():
+    """PRs reviewed this month (deduped by PR URL)."""
+    reviews = []
+    seen: set = set()
+    try:
+        for event in gh_get(f"https://api.github.com/users/{GITHUB_ACTOR}/events"):
+            if event.get("type") != "PullRequestReviewEvent":
+                continue
+            ts = event.get("created_at", "")
+            if not ts:
+                continue
+            dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            if not (MONTH_START <= dt <= MONTH_END):
+                continue
+            payload = event.get("payload", {})
+            pr      = payload.get("pull_request", {})
+            if not pr or pr.get("html_url") in seen:
+                continue
+            seen.add(pr["html_url"])
+            reviews.append({
+                "title":  pr.get("title", ""),
+                "number": pr.get("number"),
+                "repo":   (pr.get("base") or {}).get("repo", {}).get("name", ""),
+                "url":    pr.get("html_url", ""),
+            })
+    except Exception as e:
+        print(f"Warning — PR reviews: {e}", file=sys.stderr)
+    return reviews
+
 # ── Narrative generation ──────────────────────────────────────────────────────
-def _template_narrative(prs, commits, branch_work):
-    if not prs and not commits and not branch_work:
+def _template_narrative(prs, commits, branch_work, created_issues=None, pr_reviews=None):
+    created_issues = created_issues or []
+    pr_reviews     = pr_reviews or []
+    if not prs and not commits and not branch_work and not created_issues and not pr_reviews:
         return f"No activity was recorded for {MONTH_LABEL}."
     parts = []
     if prs:
@@ -253,10 +308,18 @@ def _template_narrative(prs, commits, branch_work):
     if branch_work:
         branch_msgs = [m for msgs in branch_work.values() for m in msgs][:3]
         parts.append(f"Branch work (no PR): {'; '.join(branch_msgs)}.")
+    if created_issues:
+        titles = "; ".join(i['title'] for i in created_issues[:3])
+        parts.append(f"Issues opened: {titles}.")
+    if pr_reviews:
+        titles = "; ".join(r['title'] for r in pr_reviews[:3])
+        parts.append(f"PRs reviewed: {titles}.")
     return " ".join(parts)
 
-def generate_narrative(prs, commits, branch_work):
-    if not prs and not commits and not branch_work:
+def generate_narrative(prs, commits, branch_work, created_issues=None, pr_reviews=None):
+    created_issues = created_issues or []
+    pr_reviews     = pr_reviews or []
+    if not prs and not commits and not branch_work and not created_issues and not pr_reviews:
         return f"No activity was recorded for {MONTH_LABEL}."
 
     pr_block = (
@@ -274,14 +337,27 @@ def generate_narrative(prs, commits, branch_work):
         for b, msgs in branch_work.items()
     ) or "None"
 
+    issue_block = "\n".join(
+        f"- [#{i['number']}]({i['url']}) [{i['repo']}]: {i['title']}"
+        for i in created_issues
+    ) or "None"
+
+    review_block = "\n".join(
+        f"- [#{r['number']}]({r['url']}) [{r['repo']}]: {r['title']}"
+        for r in pr_reviews
+    ) or "None"
+
     prompt = (
         f"Below is the GitHub activity for {MONTH_LABEL}.\n\n"
         f"Merged Pull Requests:\n{pr_block}\n\n"
         f"Commits on PR branches:\n{commit_block}\n\n"
         f"Branch work (commits on branches without a PR):\n{branch_block}\n\n"
+        f"Issues opened this month:\n{issue_block}\n\n"
+        f"PRs reviewed this month:\n{review_block}\n\n"
         "Write a concise 3–5 sentence first-person narrative summary of the month's work (use 'I', not 'the developer'). "
         "Focus on the overall themes and goals, not individual items. "
         "Include work done directly in branches even if no PR was opened. "
+        "Mention issues opened and PRs reviewed where relevant. "
         "Do NOT mention PR numbers, issue numbers, commit hashes, URLs, or weeks. "
         "Do NOT use bullet points. "
         "Write in plain prose as a single cohesive paragraph. "
@@ -322,7 +398,7 @@ def generate_narrative(prs, commits, branch_work):
             f"Warning — GitHub Models API unavailable ({e}); using template.",
             file=sys.stderr,
         )
-        return _template_narrative(prs, commits, branch_work)
+        return _template_narrative(prs, commits, branch_work, created_issues, pr_reviews)
 
 # ── Write output ──────────────────────────────────────────────────────────────
 def write_summary(narrative):
@@ -337,11 +413,15 @@ def main():
     repos       = discover_repos()
     prs         = collect_merged_prs()
     branch_work = collect_branch_work()
+    issues      = collect_created_issues()
+    reviews     = collect_pr_reviews()
 
     print(f"  Merged PRs        : {len(prs)}")
     print(f"  Branch-work groups: {len(branch_work)}")
+    print(f"  Issues opened     : {len(issues)}")
+    print(f"  PRs reviewed      : {len(reviews)}")
 
-    narrative = generate_narrative(prs, [], branch_work)
+    narrative = generate_narrative(prs, [], branch_work, issues, reviews)
     write_summary(narrative)
 
 if __name__ == "__main__":

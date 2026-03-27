@@ -238,7 +238,53 @@ try:
 except Exception as e:
     print(f"Warning — issues: {e}", file=sys.stderr)
 
-# ── Commit & branch-work collection (full repo+branch scan) ────────────────────
+# Issues created today (separate from updated — catches new issues on backfill)
+_seen_issue_urls = {i["url"] for i in all_issues}
+created_issues: list = []
+try:
+    for item in gh_get(
+        "https://api.github.com/search/issues",
+        {"q": f"author:{GITHUB_ACTOR} is:issue created:{date_str}..{date_str}"},
+    ):
+        if item["html_url"] in _seen_issue_urls:
+            continue
+        repo = item.get("repository_url", "").replace("https://api.github.com/repos/", "")
+        created_issues.append({
+            "repo":   repo.split("/")[-1],
+            "number": item["number"],
+            "title":  item["title"],
+            "state":  item["state"],
+            "url":    item["html_url"],
+        })
+        _seen_issue_urls.add(item["html_url"])
+except Exception as e:
+    print(f"Warning — created issues: {e}", file=sys.stderr)
+
+# PR reviews submitted today (via Events API)
+pr_reviews: list = []
+try:
+    for event in gh_get(f"https://api.github.com/users/{GITHUB_ACTOR}/events"):
+        if event.get("type") != "PullRequestReviewEvent":
+            continue
+        if not in_window(event.get("created_at", "")):
+            continue
+        payload = event.get("payload", {})
+        review  = payload.get("review", {})
+        pr      = payload.get("pull_request", {})
+        if not pr:
+            continue
+        state = review.get("state", "").lower()  # approved / changes_requested / commented
+        pr_reviews.append({
+            "number": pr.get("number"),
+            "title":  pr.get("title", ""),
+            "repo":   (pr.get("base") or {}).get("repo", {}).get("name", ""),
+            "url":    pr.get("html_url", ""),
+            "state":  state,
+        })
+except Exception as e:
+    print(f"Warning — PR reviews: {e}", file=sys.stderr)
+
+# ── Commit & branch-work collection (full repo+branch scan) ──────────────────
 # Skip any merge/sync/automated commit — filter broadly so stale branch noise
 # never leaks into the work summary
 SKIP_RE = re.compile(
@@ -382,9 +428,9 @@ for p in all_prs:
 
 
 # ── Narrative generation ──────────────────────────────────────────────────────
-def _template_narrative(prs, commits, branch_work):
+def _template_narrative(prs, commits, branch_work, created_issues=None, pr_reviews=None):
     narrative_prs = [p for p in prs if p.get("had_commits", True) or p.get("had_rfr_event")]
-    if not narrative_prs and not commits and not branch_work:
+    if not narrative_prs and not commits and not branch_work and not created_issues and not pr_reviews:
         return f"_No activity recorded for {SUMMARY_DATE.strftime('%B %d, %Y')}._"
     parts = []
     if narrative_prs:
@@ -396,13 +442,21 @@ def _template_narrative(prs, commits, branch_work):
     if branch_work:
         branch_msgs = [m for msgs in branch_work.values() for m in msgs][:4]
         parts.append(f"Branch work (no PR): {'; '.join(branch_msgs)}.")
+    if created_issues:
+        titles = "; ".join(f"[#{i['number']}]({i['url']}) {i['title'][:60]}" for i in created_issues[:3])
+        parts.append(f"Issues opened: {titles}.")
+    if pr_reviews:
+        titles = "; ".join(f"[#{r['number']}]({r['url']}) {r['title'][:60]}" for r in pr_reviews[:3])
+        parts.append(f"PRs reviewed: {titles}.")
     return " ".join(parts)
 
 
-def generate_narrative(prs, commits, branch_work):
+def generate_narrative(prs, commits, branch_work, created_issues=None, pr_reviews=None):
+    created_issues = created_issues or []
+    pr_reviews     = pr_reviews or []
     # Only include open PRs that had commits pushed in the window
     narrative_prs = [p for p in prs if p.get("had_commits", True) or p.get("had_rfr_event")]
-    if not narrative_prs and not commits and not branch_work:
+    if not narrative_prs and not commits and not branch_work and not created_issues and not pr_reviews:
         return f"_No activity recorded for {SUMMARY_DATE.strftime('%B %d, %Y')}._"
 
     pr_block = "\n".join(
@@ -418,16 +472,29 @@ def generate_narrative(prs, commits, branch_work):
         for b, msgs in branch_work.items()
     ) or "None"
 
+    issue_block = "\n".join(
+        f"- [#{i['number']}]({i['url']}) [{i['repo']}]: {i['title']}"
+        for i in created_issues
+    ) or "None"
+
+    review_block = "\n".join(
+        f"- [#{r['number']}]({r['url']}) [{r['repo']}]: {r['title']} ({r['state']})"
+        for r in pr_reviews
+    ) or "None"
+
     prompt = (
         f"Below is the GitHub activity for {SUMMARY_DATE.strftime('%A, %B %d, %Y')}.\n\n"
         f"Pull Requests (with commits today):\n{pr_block}\n\n"
         f"Commits on PR branches:\n{commit_block}\n\n"
         f"Branch work (commits on branches without a PR):\n{branch_block}\n\n"
+        f"Issues opened today:\n{issue_block}\n\n"
+        f"PRs reviewed today:\n{review_block}\n\n"
         "Write a concise 2–4 sentence first-person narrative work summary (use 'I', not 'the developer'). "
         "Describe the theme and purpose of the work, not individual commits. "
         "Include work done directly in branches even if no PR exists yet. "
+        "Mention issues opened and PRs reviewed where relevant. "
         "Mention specific variable names, components, or files only when central to the changes. "
-        "When referencing a PR, use its markdown link exactly as given in the input (e.g. [#123](url)). "
+        "When referencing a PR or issue, use its markdown link exactly as given in the input (e.g. [#123](url)). "
         "Do NOT use bullet points. Write in plain prose as a single paragraph. "
         "When referencing branch work, always use the full branch name exactly as given (e.g. repo-name/branch-name). "
         "Output only the paragraph — no headings, no preamble."
@@ -462,7 +529,7 @@ def generate_narrative(prs, commits, branch_work):
         return resp.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
         print(f"Warning — GitHub Models API unavailable ({e}); using template narrative.", file=sys.stderr)
-        return _template_narrative(prs, commits, branch_work)
+        return _template_narrative(prs, commits, branch_work, created_issues, pr_reviews)
 
 
 # ── Format tables ─────────────────────────────────────────────────────────────
@@ -523,7 +590,7 @@ def build_branch_work_table(branch_work):
 
 
 # ── Build output ──────────────────────────────────────────────────────────────
-narrative    = generate_narrative(all_prs, commit_messages, branch_work_commits)
+narrative    = generate_narrative(all_prs, commit_messages, branch_work_commits, created_issues, pr_reviews)
 pr_table     = build_pr_table([p for p in all_prs
                                if p.get("had_commits", True)
                                or in_window(p.get("created_at", ""))
