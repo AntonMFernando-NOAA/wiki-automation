@@ -205,6 +205,7 @@ All three workflows can be triggered manually from the GitHub UI.
 | Summary style | `bullets` | `narrative` or `bullets`. Leave blank to use `config.yml`. |
 | Max words (narrative) | `100` | Word limit for narrative style. Leave blank for `config.yml` value. |
 | Bullet count | `4` | Number of bullet points. Leave blank for `config.yml` value. |
+| Scripts ref | `my-custom-branch` | Branch or tag of this repo to check out before running. Leave blank to use the default branch (or the branch you triggered from). |
 
 ### Weekly workflow inputs
 
@@ -214,6 +215,7 @@ All three workflows can be triggered manually from the GitHub UI.
 | Summary style | `narrative` | `narrative` or `bullets`. Leave blank to use `config.yml`. |
 | Max words (narrative) | `130` | Word limit for narrative style. Leave blank for `config.yml` value. |
 | Bullet count | `5` | Number of bullet points. Leave blank for `config.yml` value. |
+| Scripts ref | `my-custom-branch` | Branch or tag of this repo to check out before running. Leave blank to use the default branch (or the branch you triggered from). |
 
 ### Monthly workflow inputs
 
@@ -223,9 +225,16 @@ All three workflows can be triggered manually from the GitHub UI.
 | Summary style | `bullets` | `narrative` or `bullets`. Leave blank to use `config.yml`. |
 | Max words (narrative) | `130` | Word limit for narrative style. Leave blank for `config.yml` value. |
 | Bullet count | `6` | Number of bullet points. Leave blank for `config.yml` value. |
+| Scripts ref | `my-custom-branch` | Branch or tag of this repo to check out before running. Leave blank to use the default branch (or the branch you triggered from). |
 
 > **Note:** Workflow dispatch inputs override `config.yml` for that single run only.
 > The permanent default is always whatever is set in `config.yml`.
+>
+> **Running from a custom branch (forks):** If you have customised this repo on a
+> non-default branch, use the **Scripts ref** input to specify that branch when
+> triggering manually. For scheduled runs to pick up your branch automatically,
+> set it as the **default branch** of your fork
+> (Repository → Settings → Default branch).
 
 ---
 
