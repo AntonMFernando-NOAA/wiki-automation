@@ -26,10 +26,6 @@ on:
         description: 'Number of bullet points (e.g. 5)'
         required: false
         default: ''
-      scripts_ref:
-        description: 'Branch or tag of wiki-automation to check out (leave blank for default)'
-        required: false
-        default: ''
 
 jobs:
   update-wiki:
@@ -42,8 +38,6 @@ jobs:
     steps:
       - name: Checkout scripts
         uses: actions/checkout@v5
-        with:
-          ref: ${{ inputs.scripts_ref || github.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v6
