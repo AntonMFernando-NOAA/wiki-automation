@@ -10,6 +10,8 @@ env/
 
 # Generated files
 daily_summary_patch.md
+weekly_summary_patch.md
+monthly_summary_patch.md
 wiki/
 
 # IDE

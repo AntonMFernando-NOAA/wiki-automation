@@ -67,9 +67,9 @@ except ImportError:
 
 _TRACK_REPOS  = {r.split("/")[-1] for r in (_cfg.get("track_repos") or [])}
 _IGNORE_REPOS        = {r.split("/")[-1] for r in (_cfg.get("ignore_repos") or [])}
-_SUMMARY_STYLE        = str(_cfg.get("summary_style",        "narrative")).lower()
-_SUMMARY_WORD_LIMIT   = int(_cfg.get("summary_word_limit",   130))
-_SUMMARY_BULLET_COUNT = int(_cfg.get("summary_bullet_count", 5))
+_SUMMARY_STYLE        = str(_cfg.get("monthly_summary_style")        or _cfg.get("summary_style",        "narrative")).lower()
+_SUMMARY_WORD_LIMIT   = int(_cfg.get("monthly_summary_word_limit")   or _cfg.get("summary_word_limit",   130))
+_SUMMARY_BULLET_COUNT = int(_cfg.get("monthly_summary_bullet_count") or _cfg.get("summary_bullet_count", 5))
 # ── Summary style overrides from workflow_dispatch inputs ────────────────────
 # Env vars set by the workflow take precedence over config.yml values.
 _env_style = os.environ.get("SUMMARY_STYLE", "").strip().lower()

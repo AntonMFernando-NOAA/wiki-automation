@@ -103,8 +103,6 @@ repository variable**:
 In your repo → **Settings → Actions → General → Workflow permissions**:
 - Select **Read and write permissions** → **Save**.
 
-This is required for two reasons: the workflows push updates to the wiki, and they also commit any changes to tracked repo files (e.g. `README.md`, `prompt_instructions.txt`) back to the main branch automatically after each run.
-
 ### 7. Enable the workflows
 
 The workflow files in `.github/workflows/` will be picked up automatically by
@@ -157,24 +155,48 @@ enable_daily:   true
 enable_weekly:  true
 enable_monthly: true
 
-# Summary style: "narrative" (default) or "bullets".
-# summary_word_limit   applies when style is "narrative" (default: 130).
-# summary_bullet_count applies when style is "bullets"  (default: 5).
+# Shared defaults — used for all three summary types unless a per-type key is set.
+# summary_style:        "narrative" (default) or "bullets"
+# summary_word_limit:   max words when style is "narrative" (default: 130)
+# summary_bullet_count: number of bullet points when style is "bullets" (default: 5)
 summary_style: narrative
 summary_word_limit: 130
 summary_bullet_count: 5
+
+# Per-type overrides (optional) — uncomment to customise per summary type.
+# Omitted keys fall back to the shared defaults above.
+# daily_summary_style: narrative
+# daily_summary_word_limit: 100
+# daily_summary_bullet_count: 4
+#
+# weekly_summary_style: narrative
+# weekly_summary_word_limit: 200
+# weekly_summary_bullet_count: 6
+#
+# monthly_summary_style: narrative
+# monthly_summary_word_limit: 300
+# monthly_summary_bullet_count: 8
 ```
 
 | Key | Default | Behaviour |
 |-----|---------|----------|
 | `track_repos` | `[]` (empty) | Empty = auto-scan the 40 most-recently-updated repos. Non-empty = explicit allowlist, no cap. |
-| `ignore_repos` | `[]` (empty) | Repos in this list are always skipped. |
+| `ignore_repos` | `[]` (empty) | Repos in this list are always skipped, even if listed in `track_repos`. |
 | `enable_daily` | `true` | Set to `false` to prevent the daily cron from running. |
 | `enable_weekly` | `true` | Set to `false` to prevent the weekly cron from running. |
 | `enable_monthly` | `true` | Set to `false` to prevent the monthly cron from running. |
-| `summary_style` | `narrative` | `narrative` = prose paragraph; `bullets` = bullet-point list. |
-| `summary_word_limit` | `130` | Maximum words in the narrative paragraph. |
-| `summary_bullet_count` | `5` | Number of bullet points when style is `bullets`. |
+| `summary_style` | `narrative` | Shared default: `narrative` = prose paragraph; `bullets` = bullet-point list. |
+| `summary_word_limit` | `130` | Shared default: maximum words in the narrative paragraph. |
+| `summary_bullet_count` | `5` | Shared default: number of bullet points when style is `bullets`. |
+| `daily_summary_style` | *(uses shared)* | Per-type override for the daily summary. |
+| `daily_summary_word_limit` | *(uses shared)* | Per-type override for the daily word limit. |
+| `daily_summary_bullet_count` | *(uses shared)* | Per-type override for the daily bullet count. |
+| `weekly_summary_style` | *(uses shared)* | Per-type override for the weekly summary. |
+| `weekly_summary_word_limit` | *(uses shared)* | Per-type override for the weekly word limit. |
+| `weekly_summary_bullet_count` | *(uses shared)* | Per-type override for the weekly bullet count. |
+| `monthly_summary_style` | *(uses shared)* | Per-type override for the monthly summary. |
+| `monthly_summary_word_limit` | *(uses shared)* | Per-type override for the monthly word limit. |
+| `monthly_summary_bullet_count` | *(uses shared)* | Per-type override for the monthly bullet count. |
 
 > **Note:** `pyyaml` must be available in the runner environment for
 > `config.yml` to be loaded. If it is missing, the scripts fall back to

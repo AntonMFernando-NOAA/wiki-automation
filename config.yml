@@ -40,6 +40,25 @@ ignore_repos:
 #   bullets             : a bullet-point list
 # summary_word_limit   : max words when style is "narrative" (default: 130)
 # summary_bullet_count : number of bullet points when style is "bullets" (default: 5)
+#
+# These are shared defaults used for all three summary types unless a
+# per-type key is set below.
 summary_style: narrative
 summary_word_limit: 130
 summary_bullet_count: 5
+
+# ── Per-type overrides (optional) ─────────────────────────────────────────────
+# Uncomment and set any key to override the shared defaults above for that
+# specific summary type only. Omitted keys fall back to the shared defaults.
+#
+# daily_summary_style: narrative
+# daily_summary_word_limit: 100
+# daily_summary_bullet_count: 4
+#
+# weekly_summary_style: narrative
+# weekly_summary_word_limit: 200
+# weekly_summary_bullet_count: 6
+#
+# monthly_summary_style: narrative
+# monthly_summary_word_limit: 300
+# monthly_summary_bullet_count: 8
