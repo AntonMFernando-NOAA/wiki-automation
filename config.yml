@@ -59,6 +59,6 @@ summary_bullet_count: 5
 # weekly_summary_word_limit: 200
 # weekly_summary_bullet_count: 6
 #
-# monthly_summary_style: narrative
-# monthly_summary_word_limit: 300
-# monthly_summary_bullet_count: 8
+monthly_summary_style: bullets
+monthly_summary_word_limit: 300
+monthly_summary_bullet_count: 5
