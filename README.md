@@ -98,6 +98,24 @@ repository variable**:
 |------|-------|
 | `GITHUB_ACTOR` | Your GitHub username (e.g. `octocat`) |
 
+### 6. (Optional) Pin workflows to a custom branch
+
+By default all workflows run from whatever branch triggered them (scheduled
+runs always use the repository's **default branch**). If you have forked this
+repo and keep your personalised scripts or `config.yml` on a branch other than
+`main`, you can tell every workflow to check out that branch instead:
+
+In your repo → **Settings → Secrets and variables → Actions → Variables → New
+repository variable**:
+
+| Name | Value |
+|------|-------|
+| `AUTOMATION_BRANCH` | The branch to run from (e.g. `my-custom-branch`) |
+
+When this variable is set, all three workflows — including the scheduled
+(cron) runs — will checkout and execute from that branch. Leave it unset to
+keep the default behaviour.
+
 ### 6. Enable Actions with write permissions
 
 In your repo → **Settings → Actions → General → Workflow permissions**:
@@ -115,6 +133,7 @@ repo.
 
 | Variable | Set via | Purpose |
 |----------|---------|---------|
+| `AUTOMATION_BRANCH` | `vars.AUTOMATION_BRANCH` (optional) | Branch to checkout for all runs; defaults to the triggering branch (scheduled runs use the default branch) |
 | `GH_TOKEN` | `secrets.WIKI_PAT` | GitHub API access + GitHub Models narrative generation |
 | `GITHUB_ACTOR` | `vars.GITHUB_ACTOR` (optional) | GitHub username to track; defaults to repo owner |
 | `SUMMARY_DATE` | Manual workflow input (optional) | Override the target date; defaults to yesterday |
@@ -251,7 +270,7 @@ All three workflows can be triggered manually from the GitHub UI.
 > **Note:** Workflow dispatch inputs override `config.yml` for that single run only.
 > The permanent default is always whatever is set in `config.yml`.
 >
-> **Running from a custom branch (forks):** Select your branch from the **Use workflow from** dropdown when triggering manually. For scheduled runs to pick up your branch automatically, set it as the **default branch** of your fork (Repository → Settings → Default branch).
+> **Running from a custom branch (forks):** For manual runs, select your branch from the **Use workflow from** dropdown in the GitHub UI. For scheduled runs to always use a specific branch, set the `AUTOMATION_BRANCH` repository variable (see [step 6](#6-optional-pin-workflows-to-a-custom-branch) in Setup). Alternatively, make your custom branch the **default branch** of your fork (Repository → Settings → Default branch) — scheduled workflows will then pick it up automatically without any variable.
 
 ---
 
@@ -329,6 +348,7 @@ avoid noise from automated processes and merge operations:
 |------|-------|
 | Restrict which repos are scanned | Edit `track_repos` / `ignore_repos` in `config.yml` |
 | Change schedule | Edit the `cron` expression in the relevant workflow YAML |
+| Run workflows from a custom branch | Set the `AUTOMATION_BRANCH` repository variable |
 | Track a different user | Set the `GITHUB_ACTOR` repository variable |
 | Change wiki page names | Edit the filename references in the workflow's push step |
 | Adjust narrative style | Edit the system prompt string inside `generate_*.py` |

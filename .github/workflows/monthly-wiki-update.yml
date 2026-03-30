@@ -52,6 +52,8 @@ jobs:
       - name: Checkout repository
         if: steps.check_last_day.outputs.skip != 'true'
         uses: actions/checkout@v5
+        with:
+          ref: ${{ vars.AUTOMATION_BRANCH || github.ref_name }}
 
       - name: Set up Python
         if: steps.check_last_day.outputs.skip != 'true'
