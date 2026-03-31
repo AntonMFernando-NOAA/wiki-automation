@@ -334,6 +334,7 @@ avoid noise from automated processes and merge operations:
 | `Error: GH_TOKEN is not set` | `WIKI_PAT` secret missing or expired | Regenerate PAT and update the secret |
 | `403` on `git push` to wiki | Workflow permissions not set to read/write | Settings → Actions → Workflow permissions → Read and write |
 | `fatal: could not read from remote` | Wiki not initialised | Create at least one wiki page manually first |
+| `The requested URL returned error: 500` on `wiki.git` clone | Wiki not initialised (GitHub returns 500 for uninitialised wikis) | Create at least one wiki page manually first (repo → **Wiki** tab → **Create the first page**) |
 | No activity in summary | PAT lacks `repo` or `read:org` scope | Regenerate PAT with the correct scopes |
 | Workflow not visible under Actions | Workflow YAML not in `.github/workflows/` | Confirm files are committed to the default branch |
 | `config.yml` ignored or warning printed | `pyyaml` not installed | Add `pip install pyyaml` to the workflow's setup step |
