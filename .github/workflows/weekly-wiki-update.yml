@@ -54,7 +54,7 @@ jobs:
           GH_TOKEN: ${{ secrets.WIKI_PAT }}
           GITHUB_ACTOR: ${{ vars.GITHUB_ACTOR || github.repository_owner }}
           WEEK_START: ${{ inputs.week_start }}
-          SUMMARY_STYLE: ${{ inputs.summary_style }}
+          SUMMARY_STYLE: ${{ (inputs.summary_style == 'narrative' || inputs.summary_style == 'bullets') && inputs.summary_style || '' }}
           SUMMARY_WORD_LIMIT: ${{ inputs.summary_word_limit }}
           SUMMARY_BULLET_COUNT: ${{ inputs.summary_bullet_count }}
         run: python generate_weekly_summary.py
