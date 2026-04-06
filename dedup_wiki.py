@@ -25,10 +25,17 @@ def parse_date(line):
             return datetime.strptime(m.group(1).strip(), "%B %Y")
         except ValueError:
             pass
-    # Weekly section: "## Week of March 23–27, 2026" (date range)
+    # Weekly section: "## Week of 3/30/2026-4/3/2026" or "## Week of March 23–27, 2026"
     if line.startswith("## Week of "):
-        rest = line[11:]  # e.g. "March 23–27, 2026"
-        # Range format: "Month DD–DD, YYYY" or "Month DD–Month DD, YYYY"
+        rest = line[11:]  # e.g. "3/30/2026-4/3/2026" or "March 23–27, 2026"
+        # New numeric format: "M/D/YYYY-M/D/YYYY"
+        m_num = re.match(r"(\d{1,2}/\d{1,2}/\d{4})-\d{1,2}/\d{1,2}/\d{4}", rest)
+        if m_num:
+            try:
+                return datetime.strptime(m_num.group(1), "%m/%d/%Y")
+            except ValueError:
+                pass
+        # Legacy format: "Month DD–DD, YYYY" or "Month DD–Month DD, YYYY"
         m2 = re.match(r"([A-Za-z]+ \d+)[\u2013\u2014\-](?:[A-Za-z]+ )?\d+, (\d{4})", rest)
         if m2:
             try:

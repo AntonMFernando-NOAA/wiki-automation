@@ -492,7 +492,7 @@ def _template_narrative(prs, commits, branch_work, created_issues=None, pr_revie
     if not narrative_prs and not commits and not branch_work and not created_issues and not pr_reviews:
         return (
             f"No activity was recorded for the week of "
-            f"{MONDAY.strftime('%B %d')}–{FRIDAY.strftime('%B %d, %Y')}."
+            f"{MONDAY.strftime('%-m/%-d/%Y')}-{FRIDAY.strftime('%-m/%-d/%Y')}."
         )
     repos_mentioned = sorted({p["repo"] for p in narrative_prs})
     open_prs   = [p for p in narrative_prs if p["state"] == "open"]
@@ -530,7 +530,7 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
     if not narrative_prs and not commits and not branch_work and not created_issues and not pr_reviews:
         return (
             f"No activity was recorded for the week of "
-            f"{MONDAY.strftime('%B %d')}–{FRIDAY.strftime('%B %d, %Y')}."
+            f"{MONDAY.strftime('%-m/%-d/%Y')}-{FRIDAY.strftime('%-m/%-d/%Y')}."
         )
 
     pr_block     = "\n".join(
@@ -569,7 +569,7 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
     if _SUMMARY_STYLE == "bullets":
         prompt = (
             f"Below is the GitHub activity for the week of "
-            f"{MONDAY.strftime('%B %d')}–{FRIDAY.strftime('%B %d, %Y')}.\n\n"
+            f"{MONDAY.strftime('%-m/%-d/%Y')}-{FRIDAY.strftime('%-m/%-d/%Y')}.\n\n"
             f"{activity_text}\n\n"
             f"Write exactly {_SUMMARY_BULLET_COUNT} concise bullet points summarising the key tasks this week — omit the subject pronoun and start each bullet directly with a past-tense verb (e.g. 'Worked on...', not 'I worked on...'). "
             "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
@@ -583,7 +583,7 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
     else:
         prompt = (
             f"Below is the GitHub activity for the week of "
-            f"{MONDAY.strftime('%B %d')}–{FRIDAY.strftime('%B %d, %Y')}.\n\n"
+            f"{MONDAY.strftime('%-m/%-d/%Y')}-{FRIDAY.strftime('%-m/%-d/%Y')}.\n\n"
             f"{activity_text}\n\n"
             f"Write a concise narrative work summary in no more than {_SUMMARY_WORD_LIMIT} words — omit the subject pronoun and start sentences directly with a past-tense verb (e.g. 'Worked on...', not 'I worked on...'). "
             "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
@@ -681,7 +681,7 @@ pr_table     = build_pr_table([p for p in all_prs
 branch_table = build_branch_work_table(branch_work_commits)
 
 sections = [
-    f"## Week of {MONDAY.strftime('%B')} {MONDAY.day}–{FRIDAY.day}, {FRIDAY.year}\n"
+    f"## Week of {MONDAY.strftime('%-m/%-d/%Y')}-{FRIDAY.strftime('%-m/%-d/%Y')}\n"
     f"_Automatically maintained log of weekly GitHub activity._",
     "",
     "### 🔀 Pull Requests",

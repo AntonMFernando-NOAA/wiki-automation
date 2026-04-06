@@ -2,7 +2,7 @@ name: Monthly Wiki Update
 
 on:
   schedule:
-    - cron: '59 23 28-31 * *'    # 23:59 UTC on days 28-31; script guards last-day-only
+    - cron: '0 0 1 * *'    # midnight UTC on the 1st of each month; generates prior month's report
   workflow_dispatch:
     inputs:
       month:
@@ -36,37 +36,20 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-      - name: Check if today is the last day of the month
-        id: check_last_day
-        if: github.event_name == 'schedule'
-        run: |
-          today=$(date -u +%d)
-          last=$(date -u -d "$(date -u +%Y-%m-01) +1 month -1 day" +%d)
-          if [ "$today" != "$last" ]; then
-            echo "Not the last day of the month ($today vs $last). Skipping."
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Checkout repository
-        if: steps.check_last_day.outputs.skip != 'true'
         uses: actions/checkout@v5
         with:
           ref: ${{ vars.AUTOMATION_BRANCH || github.ref_name }}
 
       - name: Set up Python
-        if: steps.check_last_day.outputs.skip != 'true'
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
       - name: Install dependencies
-        if: steps.check_last_day.outputs.skip != 'true'
         run: pip install requests pyyaml
 
       - name: Generate monthly summary
-        if: steps.check_last_day.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.WIKI_PAT }}
           GITHUB_ACTOR: ${{ vars.GITHUB_ACTOR || github.repository_owner }}
@@ -77,7 +60,6 @@ jobs:
         run: python generate_monthly_summary.py
 
       - name: Push to wiki
-        if: steps.check_last_day.outputs.skip != 'true'
         env:
           WIKI_PAT: ${{ secrets.WIKI_PAT }}
           REPO: ${{ github.repository }}
