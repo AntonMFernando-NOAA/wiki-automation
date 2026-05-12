@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Generate a monthly progress report as a single narrative paragraph.
-No PR/issue/commit metadata is included — output is plain prose only.
+Includes relevant PR/issue numbers and URLs where appropriate.
 
 Format:
   ## Progress Report — <Month Year>
@@ -429,7 +429,10 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
             f"Write exactly {_SUMMARY_BULLET_COUNT} concise bullet points summarising the month's work — omit the subject pronoun and start each bullet directly with a past-tense verb (e.g. 'Worked on...', not 'I worked on...'). "
             "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
             "Each bullet should cover one high-level theme or area of work. "
-            "Do NOT mention PR numbers, issue numbers, commit hashes, or URLs. "
+            "Where relevant, include the repo name plus associated PR or issue numbers "
+            "(e.g. 'NCEPLIBS-ip PR #123, #128' or '<repo> issue #42'). "
+            "You may include URLs for significant PRs or issues when available. "
+            "Do NOT mention commit hashes. "
             "When referencing branch work, use the repo name the branch belonged to. "
             "Naturally integrate the repository name into each bullet where relevant "
             "(e.g. 'in global-workflow', 'in GDASApp') so it is clear where each activity occurred. "
@@ -442,7 +445,10 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
             f"Write a concise narrative summary of the month's work in no more than {_SUMMARY_WORD_LIMIT} words — omit the subject pronoun and start sentences directly with a past-tense verb (e.g. 'Worked on...', not 'I worked on...'). "
             "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
             "Focus on the overall themes and goals, not individual items. "
-            "Do NOT mention PR numbers, issue numbers, commit hashes, URLs, or weeks. "
+            "Where relevant, include the repo name plus associated PR or issue numbers "
+            "(e.g. 'NCEPLIBS-ip PR #123, #128' or '<repo> issue #42'). "
+            "You may include URLs for significant PRs or issues when available. "
+            "Do NOT mention commit hashes or specific week dates. "
             "Do NOT use bullet points. "
             "Write in plain prose as a single cohesive paragraph. "
             "When referencing branch work, use the repo name the branch belonged to and consider these are ongoing work. "
@@ -467,7 +473,9 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
                             "You are writing a monthly work log entry for a software developer. "
                             "Do NOT use 'I', 'the developer', or 'they' — omit the subject pronoun entirely and begin sentences with a past-tense verb (e.g. 'Worked on...', 'Fixed...', 'Added...'). "
                             "Be specific about what was worked on; avoid generic filler. "
-                            "Never mention PR numbers, issue numbers, commit hashes, URLs, or specific week dates."
+                            "Where helpful, cite PR or issue numbers with the repo name "
+                            "(e.g. 'NCEPLIBS-ip PR #123') or include a URL. "
+                            "Never mention commit hashes or specific week dates."
                         ),
                     },
                     {"role": "user", "content": prompt},
