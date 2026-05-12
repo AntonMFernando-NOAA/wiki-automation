@@ -385,7 +385,7 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
 
     pr_block = (
         "\n".join(
-            f"- {p['title']}"
+            f"- [{p['repo']} PR #{p['number']}]({p['url']}): {p['title']}"
             + (f"\n  {p['body'][:200]}" if p["body"].strip() else "")
             for p in prs
         )
@@ -429,12 +429,15 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
             f"Write exactly {_SUMMARY_BULLET_COUNT} concise bullet points summarising the month's work — omit the subject pronoun and start each bullet directly with a past-tense verb (e.g. 'Worked on...', not 'I worked on...'). "
             "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
             "Each bullet should cover one high-level theme or area of work. "
-            "Where relevant, include the repo name plus associated PR or issue numbers "
-            "(e.g. 'NCEPLIBS-ip PR #123, #128' or '<repo> issue #42'). "
-            "You may include URLs for significant PRs or issues when available. "
+            "Where relevant, include the repo name plus PR or issue numbers as markdown hyperlinks "
+            "(e.g. '[NCEPLIBS-ip PR #123](url)' or '[repo issue #42](url)') — always use the provided URL. "
             "Do NOT mention commit hashes. "
-            "When referencing branch work, use the repo name the branch belonged to. "
-            "Naturally integrate the repository name into each bullet where relevant "
+            "For in-progress branch work the key is formatted as 'repo/branch-name'. "
+            "Do NOT mention the feature branch name (e.g. do not say 'feature/develop-compath'). "
+            "Instead, infer the upstream base branch from the branch name "
+            "(e.g. a branch named 'feature/develop-*' → 'develop', 'feature/gfsv17-*' → 'gfs.v17') "
+            "and refer to it as 'the develop branch of global-workflow' or 'the gfs.v17 branch of global-workflow'. "
+            "Naturally integrate the repository name where relevant "
             "(e.g. 'in global-workflow', 'in GDASApp') so it is clear where each activity occurred. "
             "Output only the bullet list — no headings, no preamble."
         )
@@ -445,14 +448,17 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
             f"Write a concise narrative summary of the month's work in no more than {_SUMMARY_WORD_LIMIT} words — omit the subject pronoun and start sentences directly with a past-tense verb (e.g. 'Worked on...', not 'I worked on...'). "
             "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
             "Focus on the overall themes and goals, not individual items. "
-            "Where relevant, include the repo name plus associated PR or issue numbers "
-            "(e.g. 'NCEPLIBS-ip PR #123, #128' or '<repo> issue #42'). "
-            "You may include URLs for significant PRs or issues when available. "
+            "Where relevant, include the repo name plus PR or issue numbers as markdown hyperlinks "
+            "(e.g. '[NCEPLIBS-ip PR #123](url)' or '[repo issue #42](url)') — always use the provided URL. "
             "Do NOT mention commit hashes or specific week dates. "
+            "For in-progress branch work the key is formatted as 'repo/branch-name'. "
+            "Do NOT mention the feature branch name (e.g. do not say 'feature/develop-compath'). "
+            "Instead, infer the upstream base branch from the branch name "
+            "(e.g. a branch named 'feature/develop-*' → 'develop', 'feature/gfsv17-*' → 'gfs.v17') "
+            "and refer to it as 'the develop branch of global-workflow' or 'the gfs.v17 branch of global-workflow'. "
             "Do NOT use bullet points. "
             "Write in plain prose as a single cohesive paragraph. "
-            "When referencing branch work, use the repo name the branch belonged to and consider these are ongoing work. "
-            "Naturally integrate the repository name into the narrative where relevant "
+            "Naturally integrate the repository name where relevant "
             "(e.g. 'in global-workflow', 'in GDASApp') so it is clear where each activity occurred. "
             "Output only the paragraph — no headings, no preamble."
         )
@@ -473,8 +479,10 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
                             "You are writing a monthly work log entry for a software developer. "
                             "Do NOT use 'I', 'the developer', or 'they' — omit the subject pronoun entirely and begin sentences with a past-tense verb (e.g. 'Worked on...', 'Fixed...', 'Added...'). "
                             "Be specific about what was worked on; avoid generic filler. "
-                            "Where helpful, cite PR or issue numbers with the repo name "
-                            "(e.g. 'NCEPLIBS-ip PR #123') or include a URL. "
+                            "Where helpful, cite PRs and issues as markdown hyperlinks using the provided URLs "
+                            "(e.g. '[NCEPLIBS-ip PR #123](url)'). "
+                            "For branch work, refer only to the upstream base branch (develop, gfs.v17, etc.), "
+                            "never the full feature branch name. "
                             "Never mention commit hashes or specific week dates."
                         ),
                     },
