@@ -354,11 +354,58 @@ def collect_pr_reviews():
     return [r for r in reviews if _should_include_repo(r["repo"])]
 
 # ── Narrative generation ──────────────────────────────────────────────────────
+def _base_branch(branch_key):
+    """Infer the upstream base branch from a 'repo/branch' key.
+
+    e.g. 'global-workflow/feature/develop-foo' -> 'develop',
+         'global-workflow/feature/gfsv17-bar' -> 'gfs.v17'.
+    Falls back to the repo name only (no branch) when it can't be inferred.
+    """
+    repo = branch_key.split("/", 1)[0]
+    tail = branch_key.split("/", 1)[1] if "/" in branch_key else ""
+    m = re.search(r"(?:feature|bug|fix|hotfix)[/-](develop|gfsv?1?7|main|master)", tail, re.I)
+    if m:
+        token = m.group(1).lower()
+        base = "gfs.v17" if token.startswith("gfsv") or token == "gfsv17" else token
+        return f"the {base} branch of {repo}"
+    return f"{repo}"
+
+
+def _template_bullets(prs, branch_work, created_issues, pr_reviews):
+    """Deterministic markdown bullet list used when the LLM is unavailable.
+
+    Produces one themed bullet per item (with PR/issue hyperlinks) so the
+    monthly report keeps its bullet format even without an inference backend.
+    """
+    bullets = []
+    for p in prs:
+        bullets.append(
+            f"- Merged [{p['repo']} PR #{p['number']}]({p['url']}): {p['title']}."
+        )
+    for i in created_issues:
+        bullets.append(
+            f"- Opened [{i['repo']} issue #{i['number']}]({i['url']}): {i['title']}."
+        )
+    for r in pr_reviews:
+        bullets.append(
+            f"- Reviewed [{r['repo']} PR #{r['number']}]({r['url']}): {r['title']}."
+        )
+    for branch_key, msgs in branch_work.items():
+        unique = list(dict.fromkeys(msgs))
+        desc = "; ".join(unique[:2])
+        bullets.append(f"- Continued in-progress work on {_base_branch(branch_key)}: {desc}.")
+    return "\n".join(bullets)
+
+
 def _template_narrative(prs, commits, branch_work, created_issues=None, pr_reviews=None):
     created_issues = created_issues or []
     pr_reviews     = pr_reviews or []
     if not prs and not commits and not branch_work and not created_issues and not pr_reviews:
         return f"No activity was recorded for {MONTH_LABEL}."
+    # Preserve the requested output shape even when the LLM is unavailable:
+    # emit a markdown bullet list for "bullets" style, prose otherwise.
+    if _SUMMARY_STYLE == "bullets":
+        return _template_bullets(prs, branch_work, created_issues, pr_reviews)
     parts = []
     if prs:
         titles = "; ".join(p['title'] for p in prs[:4])
