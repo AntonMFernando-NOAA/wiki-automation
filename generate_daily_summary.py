@@ -71,6 +71,27 @@ if _env_bc:
     except ValueError:
         pass
 
+# ── LLM (inference) provider config ──────────────────────────────────────────
+# GitHub Models was retired on 2026-07-30, so its inference endpoint no longer
+# works. Summaries now use an OpenAI-compatible Chat Completions API. Provide an
+# API key via the OPENAI_API_KEY (or LLM_API_KEY) workflow secret. Endpoint and
+# model are configurable via env or config.yml; when no key is set the script
+# falls back to the deterministic template so runs never hard-fail.
+_LLM_API_KEY = (
+    os.environ.get("OPENAI_API_KEY")
+    or os.environ.get("LLM_API_KEY", "")
+).strip()
+_LLM_API_URL = (
+    os.environ.get("LLM_API_URL")
+    or _cfg.get("llm_api_url")
+    or "https://api.openai.com/v1/chat/completions"
+)
+_LLM_MODEL = (
+    os.environ.get("LLM_MODEL")
+    or _cfg.get("llm_model")
+    or "gpt-4o-mini"
+)
+
 
 # ── Schedule-disable check ────────────────────────────────────────────────────
 # If enable_daily is explicitly False in config.yml and this is a scheduled run,
@@ -593,15 +614,22 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
             "Output only the paragraph — no headings, no preamble."
         )
 
+    if not _LLM_API_KEY:
+        print(
+            "Warning — no OPENAI_API_KEY/LLM_API_KEY set; using template narrative.",
+            file=sys.stderr,
+        )
+        return _template_narrative(prs, commits, branch_work, created_issues, pr_reviews)
+
     try:
         resp = requests.post(
-            "https://models.inference.ai.azure.com/chat/completions",
+            _LLM_API_URL,
             headers={
-                "Authorization": f"Bearer {TOKEN}",
+                "Authorization": f"Bearer {_LLM_API_KEY}",
                 "Content-Type": "application/json",
             },
             json={
-                "model": "gpt-4o-mini",
+                "model": _LLM_MODEL,
                 "messages": [
                     {
                         "role": "system",

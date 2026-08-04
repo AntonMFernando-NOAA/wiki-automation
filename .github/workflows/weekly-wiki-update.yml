@@ -57,6 +57,11 @@ jobs:
           SUMMARY_STYLE: ${{ (inputs.summary_style == 'narrative' || inputs.summary_style == 'bullets') && inputs.summary_style || '' }}
           SUMMARY_WORD_LIMIT: ${{ inputs.summary_word_limit }}
           SUMMARY_BULLET_COUNT: ${{ inputs.summary_bullet_count }}
+          # OpenAI (or any OpenAI-compatible) API key for narrative generation.
+          # GitHub Models was retired 2026-07-30; without this key the script
+          # falls back to a deterministic template. Optionally override LLM_MODEL.
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
         run: python generate_weekly_summary.py
 
       - name: Push to wiki
