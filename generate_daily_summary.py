@@ -526,21 +526,34 @@ def _template_narrative(prs, commits, branch_work, created_issues=None, pr_revie
     if not narrative_prs and not commits and not branch_work and not created_issues and not pr_reviews:
         return f"_No activity recorded for {SUMMARY_DATE.strftime('%B %d, %Y')}._"
     parts = []
-    if narrative_prs:
-        titles = "; ".join(f"[#{p['number']}]({p['url']}) {p['title'][:60]}" for p in narrative_prs[:3])
-        parts.append(f"Pull request activity centred on: {titles}.")
-    if commits:
-        unique = list(dict.fromkeys(commits[:6]))
-        parts.append(f"Commit work included: {'; '.join(unique[:4])}.")
+    for p in narrative_prs[:3]:
+        state_desc = "merged" if p["state"] == "merged" else "open"
+        parts.append(
+            f"Worked on the {state_desc} PR [#{p['number']}]({p['url']}) "
+            f"in {p['repo']}, {p['title'][:80].rstrip('.')}."
+        )
     if branch_work:
-        branch_msgs = [m for msgs in branch_work.values() for m in msgs][:4]
-        parts.append(f"In-progress work: {'; '.join(branch_msgs)}.")
+        for branch_key, msgs in list(branch_work.items())[:2]:
+            branch_parts = branch_key.split("/", 1)
+            repo = branch_parts[0]
+            branch = branch_parts[1] if len(branch_parts) == 2 else branch_key
+            desc = msgs[0][:80].rstrip('.') if msgs else "ongoing changes"
+            parts.append(
+                f"Continued work in the branch {repo}/{branch}, "
+                f"focusing on {desc}."
+            )
     if created_issues:
-        titles = "; ".join(f"[#{i['number']}]({i['url']}) {i['title'][:60]}" for i in created_issues[:3])
-        parts.append(f"Issues opened: {titles}.")
+        for i in created_issues[:2]:
+            parts.append(
+                f"Opened issue [#{i['number']}]({i['url']}) in {i['repo']}, "
+                f"{i['title'][:60].rstrip('.')}."
+            )
     if pr_reviews:
-        titles = "; ".join(f"[#{r['number']}]({r['url']}) {r['title'][:60]}" for r in pr_reviews[:3])
-        parts.append(f"PRs reviewed: {titles}.")
+        for r in pr_reviews[:2]:
+            parts.append(
+                f"Reviewed PR [#{r['number']}]({r['url']}) in {r['repo']}, "
+                f"{r['title'][:60].rstrip('.')}."
+            )
     return " ".join(parts)
 
 
@@ -657,8 +670,16 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
         )
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"].strip()
+    except requests.exceptions.HTTPError as e:
+        body = ""
+        try:
+            body = e.response.text[:500]
+        except Exception:
+            pass
+        print(f"Warning — LLM API error (HTTP {e.response.status_code}): {body}", file=sys.stderr)
+        return _template_narrative(prs, commits, branch_work, created_issues, pr_reviews)
     except Exception as e:
-        print(f"Warning — GitHub Models API unavailable ({e}); using template narrative.", file=sys.stderr)
+        print(f"Warning — LLM API unavailable ({type(e).__name__}: {e}); using template narrative.", file=sys.stderr)
         return _template_narrative(prs, commits, branch_work, created_issues, pr_reviews)
 
 
