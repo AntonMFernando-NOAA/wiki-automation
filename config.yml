@@ -5,6 +5,12 @@
 # All settings are optional — defaults are noted inline.
 # ──────────────────────────────────────────────────────────────────────────────
 
+# ── Branch ─────────────────────────────────────────────────────────────────────
+# The branch that scheduled workflow runs checkout scripts from.
+# This is the source branch for all automation code (generate_*.py, config.yml).
+# Default: main
+branch: mybranch
+
 # ── Scheduled-run toggles ─────────────────────────────────────────────────────
 # Set to false to prevent the scheduled (cron) run from executing.
 # Manual workflow_dispatch runs are NEVER blocked by these flags.

@@ -602,12 +602,18 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
         prompt = (
             f"Below is the GitHub activity for {SUMMARY_DATE.strftime('%A, %B %d, %Y')}.\n\n"
             f"{activity_text}\n\n"
-            f"Write a concise narrative work summary in no more than {_SUMMARY_WORD_LIMIT} words — omit the subject pronoun and start sentences directly with a past-tense verb (e.g. 'Worked on...', not 'I worked on...'). "
+            f"Write a coherent narrative work summary in no more than {_SUMMARY_WORD_LIMIT} words. "
+            "This should read like a short journal entry — tell the story of the day's work, "
+            "connecting related activities into a logical flow rather than listing them mechanically. "
+            "Start with the main focus of the day, then weave in supporting work. "
+            "Omit the subject pronoun and start sentences directly with a past-tense verb "
+            "(e.g. 'Focused on...', 'Continued refining...', not 'I worked on...'). "
             "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
-            "Describe the theme and purpose of the work, not individual commits. "
+            "Describe the PURPOSE and INTENT of the work (why it matters, what it advances), "
+            "not just what was touched. Group related commits and PRs into a single thought. "
             "Include work done directly in branches even if no PR exists yet. "
             "When referencing a PR or issue, use its markdown link exactly as given in the input (e.g. [#123](url)). "
-            "Do NOT use bullet points. Write in plain prose as a single paragraph. "
+            "Do NOT use bullet points or semicolon-separated lists. Write in flowing prose — 2-4 sentences that tell a story. "
             "When referencing branch work, always use the full branch name exactly as given (e.g. repo-name/branch-name). "
             "Naturally integrate the repository name into the narrative where relevant "
             "(e.g. 'in global-workflow', 'in GDASApp') so it is clear where each activity occurred. "
@@ -635,7 +641,10 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
                         "role": "system",
                         "content": (
                             "You are writing a daily work log entry for a software developer. "
-                            "Do NOT use 'I', 'the developer', or 'they' — omit the subject pronoun entirely and begin sentences with a past-tense verb (e.g. 'Worked on...', 'Fixed...', 'Added...'). "
+                            "Do NOT use 'I', 'the developer', or 'they' — omit the subject pronoun entirely and begin sentences with a past-tense verb (e.g. 'Focused on...', 'Continued...', 'Advanced...'). "
+                            "Write like a thoughtful journal entry: connect activities into a narrative arc, "
+                            "explain WHY the work matters (what goal it advances), and group related items into single thoughts. "
+                            "Avoid mechanical lists disguised as prose — no semicolon-separated enumerations. "
                             "Be specific about what was worked on; avoid generic filler sentences."
                         ),
                     },

@@ -36,10 +36,21 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-      - name: Checkout repository
+      - name: Checkout scripts (default branch to read config)
+        uses: actions/checkout@v5
+
+      - name: Determine automation branch
+        id: branch
+        run: |
+          # Read branch from config.yml, fall back to vars.AUTOMATION_BRANCH, then current ref
+          CFG_BRANCH=$(grep -m1 '^branch:' config.yml 2>/dev/null | awk '{print $2}' | tr -d '\r')
+          BRANCH="${CFG_BRANCH:-${{ vars.AUTOMATION_BRANCH || github.ref_name }}}"
+          echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout automation branch
         uses: actions/checkout@v5
         with:
-          ref: ${{ vars.AUTOMATION_BRANCH || github.ref_name }}
+          ref: ${{ steps.branch.outputs.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v6
