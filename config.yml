@@ -9,7 +9,7 @@
 # The branch that scheduled workflow runs checkout scripts from.
 # This is the source branch for all automation code (generate_*.py, config.yml).
 # Default: main
-branch: mybranch
+branch: main
 
 # ── Scheduled-run toggles ─────────────────────────────────────────────────────
 # Set to false to prevent the scheduled (cron) run from executing.
