@@ -553,12 +553,13 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
                         "role": "system",
                         "content": (
                             "You are writing a monthly work log entry for a software developer. "
-                            "Do NOT use 'I', 'the developer', or 'they' — omit the subject pronoun entirely and begin sentences with a past-tense verb (e.g. 'Worked on...', 'Fixed...', 'Added...'). "
-                            "Be specific about what was worked on; avoid generic filler. "
-                            "Where helpful, cite PRs and issues as markdown hyperlinks using the provided URLs "
-                            "(e.g. '[NCEPLIBS-ip PR #123](url)'). "
+                            "Write in complete, natural sentences — each sentence describes one area of work. "
+                            "Do NOT use 'I', 'the developer', or 'they' — omit the subject pronoun entirely and begin sentences with a past-tense verb (e.g. 'Merged...', 'Continued...', 'Addressed...'). "
+                            "Do NOT copy PR titles or commit messages verbatim — rephrase them into clear, readable descriptions. "
+                            "Reference PRs by number and explain what the work accomplishes. "
                             "For branch work, refer only to the upstream base branch (develop, gfs.v17, etc.), "
                             "never the full feature branch name. "
+                            "Never use semicolons to join items into a list. Every sentence must be a standalone complete thought. "
                             "Never mention commit hashes or specific week dates."
                         ),
                     },
@@ -571,9 +572,17 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
         )
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"].strip()
+    except requests.exceptions.HTTPError as e:
+        body = ""
+        try:
+            body = e.response.text[:500]
+        except Exception:
+            pass
+        print(f"Warning — LLM API error (HTTP {e.response.status_code}): {body}", file=sys.stderr)
+        return _template_narrative(prs, commits, branch_work, created_issues, pr_reviews)
     except Exception as e:
         print(
-            f"Warning — GitHub Models API unavailable ({e}); using template.",
+            f"Warning — LLM API unavailable ({type(e).__name__}: {e}); using template.",
             file=sys.stderr,
         )
         return _template_narrative(prs, commits, branch_work, created_issues, pr_reviews)

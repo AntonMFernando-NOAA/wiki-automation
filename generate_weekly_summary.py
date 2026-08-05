@@ -515,32 +515,42 @@ def _template_narrative(prs, commits, branch_work, created_issues=None, pr_revie
             f"No activity was recorded for the week of "
             f"{MONDAY.strftime('%-m/%-d/%Y')}-{FRIDAY.strftime('%-m/%-d/%Y')}."
         )
-    repos_mentioned = sorted({p["repo"] for p in narrative_prs})
-    open_prs   = [p for p in narrative_prs if p["state"] == "open"]
     merged_prs = [p for p in narrative_prs if p["state"] == "merged"]
+    open_prs   = [p for p in narrative_prs if p["state"] == "open"]
     parts = []
-    titles_short = "; ".join(f"[#{p['number']}]({p['url']}) {p['title'][:60]}" for p in narrative_prs[:3])
-    if titles_short:
-        parts.append(f"This week's work covered: {titles_short}.")
-    if commits:
-        unique = list(dict.fromkeys(commits[:8]))
-        parts.append(f"Commit work included: {'; '.join(unique[:4])}.")
-    if branch_work:
-        branch_msgs = [m for msgs in branch_work.values() for m in msgs][:3]
-        parts.append(f"In-progress work: {'; '.join(branch_msgs)}.")
-    if created_issues:
-        titles = "; ".join(f"[#{i['number']}]({i['url']}) {i['title'][:60]}" for i in created_issues[:3])
-        parts.append(f"Issues opened: {titles}.")
-    if pr_reviews:
-        titles = "; ".join(f"[#{r['number']}]({r['url']}) {r['title'][:60]}" for r in pr_reviews[:3])
-        parts.append(f"PRs reviewed: {titles}.")
-    pr_summary = []
     if merged_prs:
-        pr_summary.append(f"{len(merged_prs)} PR{'s' if len(merged_prs) > 1 else ''} merged")
+        repos = sorted({p["repo"] for p in merged_prs})
+        descs = [p["title"][:70].rstrip(".") for p in merged_prs[:3]]
+        parts.append(
+            f"Merged {len(merged_prs)} PR{'s' if len(merged_prs) > 1 else ''} "
+            f"in {', '.join(repos)}, including {descs[0].lower()}"
+            + (f" and {descs[1].lower()}" if len(descs) > 1 else "") + "."
+        )
     if open_prs:
-        pr_summary.append(f"{len(open_prs)} PR{'s' if len(open_prs) > 1 else ''} open with commits")
-    if pr_summary and repos_mentioned:
-        parts.append(f"Overall, {' and '.join(pr_summary)} across {', '.join(repos_mentioned)}.")
+        for p in open_prs[:2]:
+            parts.append(
+                f"Continued work on PR [#{p['number']}]({p['url']}) in {p['repo']}, "
+                f"{p['title'][:60].rstrip('.')}."
+            )
+    if branch_work:
+        for branch_key, msgs in list(branch_work.items())[:2]:
+            branch_parts = branch_key.split("/", 1)
+            repo = branch_parts[0]
+            branch = branch_parts[1] if len(branch_parts) == 2 else branch_key
+            desc = msgs[0][:70].rstrip('.') if msgs else "ongoing changes"
+            parts.append(
+                f"Continued work on the {branch} branch in {repo}, "
+                f"focusing on {desc.lower()}."
+            )
+    if created_issues:
+        for i in created_issues[:2]:
+            parts.append(
+                f"Opened issue [#{i['number']}]({i['url']}) in {i['repo']} "
+                f"regarding {i['title'][:60].rstrip('.').lower()}."
+            )
+    if pr_reviews:
+        review_refs = ", ".join(f"[#{r['number']}]({r['url']})" for r in pr_reviews[:3])
+        parts.append(f"Reviewed and commented on PRs {review_refs}.")
     return " ".join(parts)
 
 
@@ -606,13 +616,17 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
             f"Below is the GitHub activity for the week of "
             f"{MONDAY.strftime('%-m/%-d/%Y')}-{FRIDAY.strftime('%-m/%-d/%Y')}.\n\n"
             f"{activity_text}\n\n"
-            f"Write a concise narrative work summary in no more than {_SUMMARY_WORD_LIMIT} words — omit the subject pronoun and start sentences directly with a past-tense verb (e.g. 'Worked on...', not 'I worked on...'). "
+            f"Write a narrative work summary in no more than {_SUMMARY_WORD_LIMIT} words as complete, flowing sentences. "
+            "Each sentence should describe one area of work and explain what was done and why. "
+            "Reference PRs naturally by number (e.g. 'in PR #5132' or 'including PR #5068') followed by a brief explanation — "
+            "do NOT paste raw commit messages or PR titles verbatim. Rephrase them into readable descriptions. "
+            "For branch work, mention the branch name and describe what the work accomplishes. "
+            "Omit the subject pronoun and start sentences directly with a past-tense verb "
+            "(e.g. 'Merged...', 'Continued...', 'Addressed...'). "
             "Only describe the categories listed above — do NOT mention or imply the absence of any category not listed. "
-            "Focus on the themes and goals of the work, not individual commits. "
-            "When referencing a PR or issue, use its markdown link exactly as given in the input (e.g. [#123](url)). "
-            "Do NOT use bullet points. Write in plain prose as a single cohesive paragraph. "
-            "When referencing branch work, use the repository name branch belonged to and describe the tasks as in-progress. "
-            "Naturally integrate the repository name into the narrative where relevant "
+            "Do NOT use bullet points, semicolons to join items, or mechanical enumerations. "
+            "Every sentence must be a complete thought that could stand on its own. "
+            "Naturally integrate the repository name where relevant "
             "(e.g. 'in global-workflow', 'in GDASApp') so it is clear where each activity occurred. "
             "Output only the paragraph — no headings, no preamble."
         )
@@ -638,8 +652,11 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
                         "role": "system",
                         "content": (
                             "You are writing a weekly work log entry for a software developer. "
-                            "Do NOT use 'I', 'the developer', or 'they' — omit the subject pronoun entirely and begin sentences with a past-tense verb (e.g. 'Worked on...', 'Fixed...', 'Added...'). "
-                            "Be specific about what was worked on; avoid generic filler sentences."
+                            "Write in complete, natural sentences — each sentence describes one task or area of work. "
+                            "Do NOT use 'I', 'the developer', or 'they' — omit the subject pronoun entirely and begin sentences with a past-tense verb (e.g. 'Merged...', 'Continued...', 'Addressed...'). "
+                            "Do NOT copy PR titles or commit messages verbatim — rephrase them into clear, readable descriptions. "
+                            "Reference PRs by number (e.g. 'PR #123') and explain what the work accomplishes. "
+                            "Never use semicolons to join items into a list. Every sentence must be a standalone complete thought."
                         ),
                     },
                     {"role": "user", "content": prompt},
@@ -651,8 +668,16 @@ def generate_narrative(prs, commits, branch_work, created_issues=None, pr_review
         )
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"].strip()
+    except requests.exceptions.HTTPError as e:
+        body = ""
+        try:
+            body = e.response.text[:500]
+        except Exception:
+            pass
+        print(f"Warning — LLM API error (HTTP {e.response.status_code}): {body}", file=sys.stderr)
+        return _template_narrative(prs, commits, branch_work, created_issues, pr_reviews)
     except Exception as e:
-        print(f"Warning — GitHub Models API unavailable ({e}); using template narrative.", file=sys.stderr)
+        print(f"Warning — LLM API unavailable ({type(e).__name__}: {e}); using template narrative.", file=sys.stderr)
         return _template_narrative(prs, commits, branch_work, created_issues, pr_reviews)
 
 
