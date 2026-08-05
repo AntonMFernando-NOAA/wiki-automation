@@ -2,9 +2,10 @@
 
 Automatically post **daily, weekly, and monthly summaries** of your GitHub
 activity (commits, pull requests, and issues) to your repository's wiki.
-Summaries are generated as first-person **narrative paragraphs or bullet-point lists** using the GitHub
-Models API (gpt-4o-mini) with a plain-text fallback — no external services or
-API keys required beyond a standard GitHub PAT.
+Summaries are generated as first-person **narrative paragraphs or bullet-point lists** using an
+OpenAI-compatible Chat Completions API (default: `gpt-4o-mini`) with a plain-text
+fallback when no API key is configured — no external services required beyond a
+standard GitHub PAT and an optional LLM API key.
 
 Great for tracking your own work and producing progress reports with minimal
 effort.
@@ -103,7 +104,20 @@ repository variable**:
 By default all workflows run from whatever branch triggered them (scheduled
 runs always use the repository's **default branch**). If you have forked this
 repo and keep your personalised scripts or `config.yml` on a branch other than
-`main`, you can tell every workflow to check out that branch instead:
+`main`, you have two options:
+
+**Option A — `config.yml` (recommended):** Set the `branch` key in `config.yml`:
+
+```yaml
+branch: my-custom-branch
+```
+
+The workflows first checkout the default branch to read `config.yml`, then
+re-checkout the configured branch. This is the simplest approach and doesn't
+require any GitHub variable setup.
+
+**Option B — Repository variable:** Add a repository variable as a fallback
+(used when `branch` is not set in `config.yml`):
 
 In your repo → **Settings → Secrets and variables → Actions → Variables → New
 repository variable**:
@@ -112,16 +126,42 @@ repository variable**:
 |------|-------|
 | `AUTOMATION_BRANCH` | The branch to run from (e.g. `my-custom-branch`) |
 
-When this variable is set, all three workflows — including the scheduled
-(cron) runs — will checkout and execute from that branch. Leave it unset to
+When either is set, all three workflows — including the scheduled
+(cron) runs — will checkout and execute from that branch. Leave both unset to
 keep the default behaviour.
 
-### 6. Enable Actions with write permissions
+### 7. (Optional) Add an LLM API key for AI-generated narratives
+
+The work summary section uses an OpenAI-compatible Chat Completions API to
+generate narrative paragraphs (or bullet lists). Without an API key the scripts
+fall back to a deterministic template — functional but less polished.
+
+In your repo → **Settings → Secrets and variables → Actions → Secrets → New
+repository secret**:
+
+| Name | Value |
+|------|-------|
+| `OPENAI_API_KEY` | Your OpenAI API key (or any compatible provider) |
+
+Optionally set these repository variables to use a different model or endpoint:
+
+| Name | Value | Default |
+|------|-------|---------|
+| `LLM_MODEL` | Model name | `gpt-4o-mini` |
+
+You can also configure the endpoint and model in `config.yml`:
+
+```yaml
+llm_api_url: https://api.openai.com/v1/chat/completions
+llm_model: gpt-4o-mini
+```
+
+### 8. Enable Actions with write permissions
 
 In your repo → **Settings → Actions → General → Workflow permissions**:
 - Select **Read and write permissions** → **Save**.
 
-### 7. Enable the workflows
+### 9. Enable the workflows
 
 The workflow files in `.github/workflows/` will be picked up automatically by
 GitHub Actions. You can verify they appear under the **Actions** tab of your
@@ -133,8 +173,10 @@ repo.
 
 | Variable | Set via | Purpose |
 |----------|---------|---------|
-| `AUTOMATION_BRANCH` | `vars.AUTOMATION_BRANCH` (optional) | Branch to checkout for all runs; defaults to the triggering branch (scheduled runs use the default branch) |
-| `GH_TOKEN` | `secrets.WIKI_PAT` | GitHub API access + GitHub Models narrative generation |
+| `AUTOMATION_BRANCH` | `vars.AUTOMATION_BRANCH` (optional) | Fallback branch when `branch` is not set in `config.yml`; defaults to the triggering branch (scheduled runs use the default branch) |
+| `GH_TOKEN` | `secrets.WIKI_PAT` | GitHub API access for data collection and wiki push |
+| `OPENAI_API_KEY` | `secrets.OPENAI_API_KEY` (optional) | API key for AI-generated narratives; falls back to template when unset |
+| `LLM_MODEL` | `vars.LLM_MODEL` (optional) | Override model name (default: `gpt-4o-mini`) |
 | `GITHUB_ACTOR` | `vars.GITHUB_ACTOR` (optional) | GitHub username to track; defaults to repo owner |
 | `SUMMARY_DATE` | Manual workflow input (optional) | Override the target date; defaults to yesterday |
 | `WEEK_START` | Manual workflow input (optional) | Override the week start date (weekly workflow) |
@@ -156,6 +198,10 @@ search API across all repositories. Commits are scanned per-branch across your
 scanned without touching the scripts. All keys are optional.
 
 ```yaml
+# Branch to run automation from (for scheduled/cron runs).
+# Default: main
+branch: main
+
 # If non-empty, ONLY these repos are scanned (no 40-repo cap).
 # Accepts "owner/name" or bare "name".
 track_repos:
@@ -173,6 +219,11 @@ ignore_repos:
 enable_daily:   true
 enable_weekly:  true
 enable_monthly: true
+
+# LLM provider for AI-generated narratives (OpenAI-compatible endpoint).
+# Leave unset to use the deterministic template fallback.
+# llm_api_url: https://api.openai.com/v1/chat/completions
+# llm_model: gpt-4o-mini
 
 # Shared defaults — used for all three summary types unless a per-type key is set.
 # summary_style:        "narrative" (default) or "bullets"
@@ -199,11 +250,14 @@ summary_bullet_count: 5
 
 | Key | Default | Behaviour |
 |-----|---------|----------|
+| `branch` | `main` | Branch that scheduled workflow runs checkout and execute from. |
 | `track_repos` | `[]` (empty) | Empty = auto-scan the 40 most-recently-updated repos. Non-empty = explicit allowlist, no cap. |
 | `ignore_repos` | `[]` (empty) | Repos in this list are always skipped, even if listed in `track_repos`. |
 | `enable_daily` | `true` | Set to `false` to prevent the daily cron from running. |
 | `enable_weekly` | `true` | Set to `false` to prevent the weekly cron from running. |
 | `enable_monthly` | `true` | Set to `false` to prevent the monthly cron from running. |
+| `llm_api_url` | `https://api.openai.com/v1/chat/completions` | OpenAI-compatible endpoint for narrative generation. |
+| `llm_model` | `gpt-4o-mini` | Model name passed to the LLM endpoint. |
 | `summary_style` | `narrative` | Shared default: `narrative` = prose paragraph; `bullets` = bullet-point list. |
 | `summary_word_limit` | `130` | Shared default: maximum words in the narrative paragraph. |
 | `summary_bullet_count` | `5` | Shared default: number of bullet points when style is `bullets`. |
@@ -270,7 +324,7 @@ All three workflows can be triggered manually from the GitHub UI.
 > **Note:** Workflow dispatch inputs override `config.yml` for that single run only.
 > The permanent default is always whatever is set in `config.yml`.
 >
-> **Running from a custom branch (forks):** For manual runs, select your branch from the **Use workflow from** dropdown in the GitHub UI. For scheduled runs to always use a specific branch, set the `AUTOMATION_BRANCH` repository variable (see [step 6](#6-optional-pin-workflows-to-a-custom-branch) in Setup). Alternatively, make your custom branch the **default branch** of your fork (Repository → Settings → Default branch) — scheduled workflows will then pick it up automatically without any variable.
+> **Running from a custom branch (forks):** For manual runs, select your branch from the **Use workflow from** dropdown in the GitHub UI. For scheduled runs to always use a specific branch, set `branch: my-custom-branch` in `config.yml` (see [step 6](#6-optional-pin-workflows-to-a-custom-branch) in Setup). Alternatively, make your custom branch the **default branch** of your fork (Repository → Settings → Default branch) — scheduled workflows will then pick it up automatically.
 
 ---
 
@@ -304,8 +358,9 @@ GitHub Actions runner
         |-- Open PRs with no real commits are kept in the PR table
         |   (draft PRs always appear in the table on the day they were opened)
         |   but omitted from the Work Summary narrative
-        |-- Calls GitHub Models API (gpt-4o-mini) for a first-person
-        |   narrative paragraph (falls back to a template if unavailable)
+        |-- Calls the configured LLM API (OpenAI-compatible, default gpt-4o-mini)
+        |   for a first-person narrative paragraph
+        |   (falls back to a deterministic template if no API key is set)
         +-- Writes <type>_summary_patch.md
   3. Clones <your-repo>.wiki.git
   4. Prepends the new entry to the relevant wiki page
@@ -338,6 +393,7 @@ avoid noise from automated processes and merge operations:
 | No activity in summary | PAT lacks `repo` or `read:org` scope | Regenerate PAT with the correct scopes |
 | Workflow not visible under Actions | Workflow YAML not in `.github/workflows/` | Confirm files are committed to the default branch |
 | `config.yml` ignored or warning printed | `pyyaml` not installed | Add `pip install pyyaml` to the workflow's setup step |
+| Work Summary is a template (not AI-generated) | `OPENAI_API_KEY` secret not set or LLM endpoint unreachable | Add the secret (see [step 7](#7-optional-add-an-llm-api-key-for-ai-generated-narratives)); the template fallback is functional but less polished |
 | Draft PR or new PR missing on backfill | PR was updated after the target date, so `updated:` search misses it | The scripts also run a `created:` search — ensure the PAT has `repo` scope on the repo where the PR lives |
 | Scheduled run fires but writes nothing | `enable_daily` / `enable_weekly` / `enable_monthly` set to `false` in `config.yml` | Expected behaviour — set back to `true` or trigger manually |
 
@@ -349,8 +405,10 @@ avoid noise from automated processes and merge operations:
 |------|-------|
 | Restrict which repos are scanned | Edit `track_repos` / `ignore_repos` in `config.yml` |
 | Change schedule | Edit the `cron` expression in the relevant workflow YAML |
-| Run workflows from a custom branch | Set the `AUTOMATION_BRANCH` repository variable |
+| Run workflows from a custom branch | Set `branch` in `config.yml` (or fall back to `AUTOMATION_BRANCH` repo variable) |
 | Track a different user | Set the `GITHUB_ACTOR` repository variable |
+| Use a different LLM model | Set `llm_model` in `config.yml` or `LLM_MODEL` repo variable |
+| Use a different LLM provider | Set `llm_api_url` in `config.yml` (must be OpenAI-compatible) |
 | Change wiki page names | Edit the filename references in the workflow's push step |
 | Adjust narrative style | Edit the system prompt string inside `generate_*.py` |
 | Add more noise-commit patterns | Extend the `SKIP_RE` regex near the top of each `generate_*.py` |
