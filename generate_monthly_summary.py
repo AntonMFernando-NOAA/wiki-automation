@@ -395,8 +395,9 @@ def _base_branch(branch_key):
 def _template_bullets(prs, branch_work, created_issues, pr_reviews):
     """Deterministic markdown bullet list used when the LLM is unavailable.
 
-    Produces one themed bullet per item (with PR/issue hyperlinks) so the
-    monthly report keeps its bullet format even without an inference backend.
+    Produces up to _SUMMARY_BULLET_COUNT themed bullets (with PR/issue
+    hyperlinks) so the monthly report stays concise even without an inference
+    backend.
     """
     bullets = []
     for p in prs:
@@ -415,7 +416,7 @@ def _template_bullets(prs, branch_work, created_issues, pr_reviews):
         unique = list(dict.fromkeys(msgs))
         desc = "; ".join(unique[:2])
         bullets.append(f"- Continued in-progress work on {_base_branch(branch_key)}: {desc}.")
-    return "\n".join(bullets)
+    return "\n".join(bullets[:_SUMMARY_BULLET_COUNT])
 
 
 def _template_narrative(prs, commits, branch_work, created_issues=None, pr_reviews=None):
