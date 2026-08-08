@@ -113,4 +113,4 @@ jobs:
 
           git add Monthly-Updates.md _Sidebar.md
           git diff --cached --quiet \
-            || (git commit -m "Monthly wiki update: $(date -u +%Y-%m)" && git push)
+            || (git commit -m "Monthly wiki update: $(date -u +%Y-%m)" && git pull --rebase origin master && git push)

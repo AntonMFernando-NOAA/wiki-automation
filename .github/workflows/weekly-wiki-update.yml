@@ -100,4 +100,4 @@ jobs:
 
           git add Weekly-Updates.md _Sidebar.md
           git diff --cached --quiet \
-            || (git commit -m "Weekly wiki update: $(date -u +%Y-%m-%d)" && git push)
+            || (git commit -m "Weekly wiki update: $(date -u +%Y-%m-%d)" && git pull --rebase origin master && git push)
